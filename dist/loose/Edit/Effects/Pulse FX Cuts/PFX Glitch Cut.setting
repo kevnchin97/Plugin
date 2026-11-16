@@ -1,0 +1,209 @@
+{
+	Tools = ordered() {
+		PFXGlitchCut = GroupOperator {
+			CtrlWZoom = false,
+			Inputs = ordered() {
+				MainInput1 = InstanceInput { SourceOp = "PFXGlitchCut_Tear", Source = "Input", },
+				Input1 = InstanceInput {
+					SourceOp = "PFXGlitchCut_Ctl",
+					Source = "NumberIn2",
+					Name = "Amount",
+					Default = 0.7,
+					MinScale = 0,
+					MaxScale = 1,
+				},
+				Input2 = InstanceInput {
+					SourceOp = "PFXGlitchCut_Ctl",
+					Source = "NumberIn3",
+					Name = "Hold Frames",
+					Default = 2,
+					MinScale = 1,
+					MaxScale = 12,
+				},
+				Input3 = InstanceInput {
+					SourceOp = "PFXGlitchCut_Ctl",
+					Source = "NumberIn4",
+					Name = "Band Size",
+					Default = 0.6,
+					MinScale = 0,
+					MaxScale = 1,
+				},
+				Input4 = InstanceInput {
+					SourceOp = "PFXGlitchCut_Ctl",
+					Source = "NumberIn5",
+					Name = "Colour Split",
+					Default = 0.7,
+					MinScale = 0,
+					MaxScale = 1,
+				},
+				Input5 = InstanceInput {
+					SourceOp = "PFXGlitchCut_Ctl",
+					Source = "NumberIn6",
+					Name = "Flicker",
+					Default = 0.4,
+					MinScale = 0,
+					MaxScale = 1,
+				},
+				Input6 = InstanceInput { SourceOp = "PFXGlitchCut_Progress", Source = "Curve", Name = "Curve", },
+				Input7 = InstanceInput { SourceOp = "PFXGlitchCut_Progress", Source = "EaseIn", Name = "Ease In", },
+				Input8 = InstanceInput { SourceOp = "PFXGlitchCut_Progress", Source = "EaseOut", Name = "Ease Out", },
+			},
+			Outputs = {
+				MainOutput1 = InstanceOutput { SourceOp = "PFXGlitchCut_Flicker", Source = "Output", },
+			},
+			ViewInfo = GroupInfo {
+				Pos = { 0, 0 },
+			},
+			Tools = ordered() {
+				PFXGlitchCut_Ctl = Custom {
+					CtrlWZoom = false,
+					UserControls = ordered() { },
+					Inputs = {
+						NumberIn1 = Input { SourceOp = "PFXGlitchCut_Progress", Source = "Value", },
+						NameforNumber1 = Input { Value = "Progress", },
+						NumberIn2 = Input { Value = 0.7, },
+						NameforNumber2 = Input { Value = "Amount", },
+						NumberIn3 = Input { Value = 2, },
+						NameforNumber3 = Input { Value = "Hold Frames", },
+						NumberIn4 = Input { Value = 0.6, },
+						NameforNumber4 = Input { Value = "Band Size", },
+						NumberIn5 = Input { Value = 0.7, },
+						NameforNumber5 = Input { Value = "Colour Split", },
+						NumberIn6 = Input { Value = 0.4, },
+						NameforNumber6 = Input { Value = "Flicker", },
+					},
+					ViewInfo = OperatorInfo {
+						Pos = { 0, 0 },
+					},
+				},
+				PFXGlitchCut_ProgressLookup = LUTBezier {
+					KeyColorSplines = {
+						[0] = {
+							[0] = {
+								0,
+								RH = { 0.3333333333, 0.3333333333 },
+								Flags = { Linear = true, },
+							},
+							[1] = {
+								1,
+								LH = { 0.6666666667, 0.6666666667 },
+								Flags = { Linear = true, },
+							},
+						},
+					},
+					SplineColor = { Red = 255, Green = 255, Blue = 255, },
+				},
+				PFXGlitchCut_Progress = LUTLookup {
+					Inputs = {
+						Source = Input {
+							Value = FuID { "Duration" },
+						},
+						Curve = Input {
+							Value = FuID { "Easing" },
+						},
+						EaseIn = Input {
+							Value = FuID { "Sine" },
+						},
+						EaseOut = Input {
+							Value = FuID { "Sine" },
+						},
+						Lookup = Input { SourceOp = "PFXGlitchCut_ProgressLookup", Source = "Value", },
+					},
+				},
+				PFXGlitchCut_Bands = FastNoise {
+					CtrlWZoom = false,
+					Inputs = {
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						Detail = Input { Value = 1, },
+						Contrast = Input { Value = 5, },
+						Brightness = Input { Value = -0.5, },
+						LockXY = Input { Value = 0, },
+						XScale = Input { Value = 0.05, },
+						YScale = Input { Expression = "3 + (1 - PFXGlitchCut_Ctl.NumberIn4)*60", },
+						Discontinuous = Input { Value = 1, },
+						Seethe = Input { Expression = "floor(time/max(1, PFXGlitchCut_Ctl.NumberIn3))*7.31", },
+						SeetheRate = Input { Value = 0, },
+						Color1Alpha = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo {
+						Pos = { 110, 0 },
+					},
+				},
+				PFXGlitchCut_BandClamp = BrightnessContrast {
+					CtrlWZoom = false,
+					Inputs = {
+						Input = Input { SourceOp = "PFXGlitchCut_Bands", Source = "Output", },
+						ClipBlack = Input { Value = 1, },
+						ClipWhite = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo {
+						Pos = { 220, 0 },
+					},
+				},
+				PFXGlitchCut_Tear = Displace {
+					CtrlWZoom = false,
+					Inputs = {
+						Foreground = Input { SourceOp = "PFXGlitchCut_BandClamp", Source = "Output", },
+						Type = Input { Value = 1, },
+						XChannel = Input { Value = 4, },
+						YChannel = Input { Value = 4, },
+						XRefraction = Input {
+							Expression = "PFXGlitchCut_Ctl.NumberIn2*0.2*(iif(((sin((floor(time/max(1, PFXGlitchCut_Ctl.NumberIn3)) + 17)*12.9898)*43758.5453) % 1) < 1.6*(4*PFXGlitchCut_Ctl.NumberIn1*(1 - PFXGlitchCut_Ctl.NumberIn1)), 1, 0)*((4*PFXGlitchCut_Ctl.NumberIn1*(1 - PFXGlitchCut_Ctl.NumberIn1))))*iif(((sin((floor(time/max(1, PFXGlitchCut_Ctl.NumberIn3)) + 3)*12.9898)*43758.5453) % 1) < 0.5, -1, 1)",
+						},
+						YRefraction = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo {
+						Pos = { 330, 0 },
+					},
+				},
+				PFXGlitchCut_Red = Transform {
+					CtrlWZoom = false,
+					Inputs = {
+						Input = Input { SourceOp = "PFXGlitchCut_Tear", Source = "Output", },
+						Center = Input {
+							Expression = "Point(0.5 + (PFXGlitchCut_Ctl.NumberIn5*0.02*(iif(((sin((floor(time/max(1, PFXGlitchCut_Ctl.NumberIn3)) + 17)*12.9898)*43758.5453) % 1) < 1.6*(4*PFXGlitchCut_Ctl.NumberIn1*(1 - PFXGlitchCut_Ctl.NumberIn1)), 1, 0)*((4*PFXGlitchCut_Ctl.NumberIn1*(1 - PFXGlitchCut_Ctl.NumberIn1))))*(0.5 + ((sin((floor(time/max(1, PFXGlitchCut_Ctl.NumberIn3)) + 29)*12.9898)*43758.5453) % 1))), 0.5)",
+						},
+						Edges = Input { Value = 3, },
+						ProcessGreen = Input { Value = 0, },
+						ProcessBlue = Input { Value = 0, },
+						ProcessAlpha = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo {
+						Pos = { 440, 0 },
+					},
+				},
+				PFXGlitchCut_Blue = Transform {
+					CtrlWZoom = false,
+					Inputs = {
+						Input = Input { SourceOp = "PFXGlitchCut_Red", Source = "Output", },
+						Center = Input {
+							Expression = "Point(0.5 - (PFXGlitchCut_Ctl.NumberIn5*0.02*(iif(((sin((floor(time/max(1, PFXGlitchCut_Ctl.NumberIn3)) + 17)*12.9898)*43758.5453) % 1) < 1.6*(4*PFXGlitchCut_Ctl.NumberIn1*(1 - PFXGlitchCut_Ctl.NumberIn1)), 1, 0)*((4*PFXGlitchCut_Ctl.NumberIn1*(1 - PFXGlitchCut_Ctl.NumberIn1))))*(0.5 + ((sin((floor(time/max(1, PFXGlitchCut_Ctl.NumberIn3)) + 29)*12.9898)*43758.5453) % 1))), 0.5)",
+						},
+						Edges = Input { Value = 3, },
+						ProcessRed = Input { Value = 0, },
+						ProcessGreen = Input { Value = 0, },
+						ProcessAlpha = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo {
+						Pos = { 550, 0 },
+					},
+				},
+				PFXGlitchCut_Flicker = BrightnessContrast {
+					CtrlWZoom = false,
+					Inputs = {
+						Input = Input { SourceOp = "PFXGlitchCut_Blue", Source = "Output", },
+						Gain = Input {
+							Expression = "1 + PFXGlitchCut_Ctl.NumberIn6*(iif(((sin((floor(time/max(1, PFXGlitchCut_Ctl.NumberIn3)) + 17)*12.9898)*43758.5453) % 1) < 1.6*(4*PFXGlitchCut_Ctl.NumberIn1*(1 - PFXGlitchCut_Ctl.NumberIn1)), 1, 0)*((4*PFXGlitchCut_Ctl.NumberIn1*(1 - PFXGlitchCut_Ctl.NumberIn1))))*(((sin((floor(time) + 41)*12.9898)*43758.5453) % 1) - 0.4)",
+						},
+					},
+					ViewInfo = OperatorInfo {
+						Pos = { 660, 0 },
+					},
+				},
+			},
+		},
+	},
+	ActiveTool = "PFXGlitchCut",
+}

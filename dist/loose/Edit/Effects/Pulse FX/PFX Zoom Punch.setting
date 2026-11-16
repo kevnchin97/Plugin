@@ -1,0 +1,137 @@
+{
+	Tools = ordered() {
+		PFXZoomPunch = GroupOperator {
+			CtrlWZoom = false,
+			Inputs = ordered() {
+				MainInput1 = InstanceInput { SourceOp = "PFXZoomPunch_Xf", Source = "Input", },
+				Input1 = InstanceInput {
+					SourceOp = "PFXZoomPunch_Ctl",
+					Source = "NumberIn2",
+					Name = "Amount",
+					Default = 0.25,
+					MinScale = 0,
+					MaxScale = 1,
+				},
+				Input2 = InstanceInput {
+					SourceOp = "PFXZoomPunch_Ctl",
+					Source = "NumberIn3",
+					Name = "Blur",
+					Default = 0.3,
+					MinScale = 0,
+					MaxScale = 1,
+				},
+				Input3 = InstanceInput { SourceOp = "PFXZoomPunch_Ctl", Source = "NumberIn4", Name = "Envelope", Default = 0, },
+				Input4 = InstanceInput { SourceOp = "PFXZoomPunch_Xf", Source = "Pivot", Name = "Zoom Centre", },
+				Input5 = InstanceInput { SourceOp = "PFXZoomPunch_Progress", Source = "Curve", Name = "Curve", },
+				Input6 = InstanceInput { SourceOp = "PFXZoomPunch_Progress", Source = "EaseIn", Name = "Ease In", },
+				Input7 = InstanceInput { SourceOp = "PFXZoomPunch_Progress", Source = "EaseOut", Name = "Ease Out", },
+			},
+			Outputs = {
+				MainOutput1 = InstanceOutput { SourceOp = "PFXZoomPunch_ZoomBlur", Source = "Output", },
+			},
+			ViewInfo = GroupInfo {
+				Pos = { 0, 0 },
+			},
+			Tools = ordered() {
+				PFXZoomPunch_Ctl = Custom {
+					CtrlWZoom = false,
+					UserControls = ordered() {
+						NumberIn4 = {
+							{ CCS_AddString = "Hit (fade out)", },
+							{ CCS_AddString = "Build (fade in)", },
+							{ CCS_AddString = "Pulse (peak mid-clip)", },
+							{ CCS_AddString = "Constant", },
+							LINKS_Name = "Envelope",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "ComboControl",
+							CC_LabelPosition = "Horizontal",
+							INP_Integer = false,
+							INP_Default = 0,
+							INP_MinScale = 0,
+							INP_MaxScale = 3,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 3,
+							ICS_ControlPage = "Controls",
+						},
+					},
+					Inputs = {
+						NumberIn1 = Input { SourceOp = "PFXZoomPunch_Progress", Source = "Value", },
+						NameforNumber1 = Input { Value = "Progress", },
+						NumberIn2 = Input { Value = 0.25, },
+						NameforNumber2 = Input { Value = "Amount", },
+						NumberIn3 = Input { Value = 0.3, },
+						NameforNumber3 = Input { Value = "Blur", },
+						NumberIn4 = Input { Value = 0, },
+						NameforNumber4 = Input { Value = "Envelope", },
+					},
+					ViewInfo = OperatorInfo {
+						Pos = { 0, 0 },
+					},
+				},
+				PFXZoomPunch_ProgressLookup = LUTBezier {
+					KeyColorSplines = {
+						[0] = {
+							[0] = {
+								0,
+								RH = { 0.3333333333, 0.3333333333 },
+								Flags = { Linear = true, },
+							},
+							[1] = {
+								1,
+								LH = { 0.6666666667, 0.6666666667 },
+								Flags = { Linear = true, },
+							},
+						},
+					},
+					SplineColor = { Red = 255, Green = 255, Blue = 255, },
+				},
+				PFXZoomPunch_Progress = LUTLookup {
+					Inputs = {
+						Source = Input {
+							Value = FuID { "Duration" },
+						},
+						Curve = Input {
+							Value = FuID { "Easing" },
+						},
+						EaseIn = Input {
+							Value = FuID { "Sine" },
+						},
+						EaseOut = Input {
+							Value = FuID { "Expo" },
+						},
+						Lookup = Input { SourceOp = "PFXZoomPunch_ProgressLookup", Source = "Value", },
+					},
+				},
+				PFXZoomPunch_Xf = Transform {
+					CtrlWZoom = false,
+					Inputs = {
+						Size = Input {
+							Expression = "1 + PFXZoomPunch_Ctl.NumberIn2*(iif(PFXZoomPunch_Ctl.NumberIn4 == 0, 1 - PFXZoomPunch_Ctl.NumberIn1, iif(PFXZoomPunch_Ctl.NumberIn4 == 1, PFXZoomPunch_Ctl.NumberIn1, iif(PFXZoomPunch_Ctl.NumberIn4 == 2, 4*PFXZoomPunch_Ctl.NumberIn1*(1 - PFXZoomPunch_Ctl.NumberIn1), 1))))",
+						},
+						Pivot = Input {
+							Value = { 0.5, 0.5 },
+						},
+					},
+					ViewInfo = OperatorInfo {
+						Pos = { 110, 0 },
+					},
+				},
+				PFXZoomPunch_ZoomBlur = DirectionalBlur {
+					CtrlWZoom = false,
+					Inputs = {
+						Input = Input { SourceOp = "PFXZoomPunch_Xf", Source = "Output", },
+						Type = Input { Value = 3, },
+						Center = Input { Expression = "PFXZoomPunch_Xf.Pivot", },
+						Length = Input {
+							Expression = "PFXZoomPunch_Ctl.NumberIn3*0.12*iif(PFXZoomPunch_Ctl.NumberIn4 == 3, 0, iif(PFXZoomPunch_Ctl.NumberIn4 == 0, 1 - PFXZoomPunch_Ctl.NumberIn1, iif(PFXZoomPunch_Ctl.NumberIn4 == 1, PFXZoomPunch_Ctl.NumberIn1, iif(PFXZoomPunch_Ctl.NumberIn4 == 2, 4*PFXZoomPunch_Ctl.NumberIn1*(1 - PFXZoomPunch_Ctl.NumberIn1), 1))))",
+						},
+					},
+					ViewInfo = OperatorInfo {
+						Pos = { 220, 0 },
+					},
+				},
+			},
+		},
+	},
+	ActiveTool = "PFXZoomPunch",
+}

@@ -1,0 +1,146 @@
+{
+	Tools = ordered() {
+		PFXWhipPan = GroupOperator {
+			CtrlWZoom = false,
+			Inputs = ordered() {
+				MainInput1 = InstanceInput { SourceOp = "PFXWhipPan_Pan", Source = "Input", },
+				Input1 = InstanceInput { SourceOp = "PFXWhipPan_Ctl", Source = "NumberIn2", Name = "Direction", Default = 0, },
+				Input2 = InstanceInput {
+					SourceOp = "PFXWhipPan_Ctl",
+					Source = "NumberIn3",
+					Name = "Distance",
+					Default = 1,
+					MinScale = 1,
+					MaxScale = 3,
+				},
+				Input3 = InstanceInput {
+					SourceOp = "PFXWhipPan_Ctl",
+					Source = "NumberIn4",
+					Name = "Blur",
+					Default = 0.6,
+					MinScale = 0,
+					MaxScale = 1,
+				},
+				Input4 = InstanceInput { SourceOp = "PFXWhipPan_Progress", Source = "Curve", Name = "Curve", },
+				Input5 = InstanceInput { SourceOp = "PFXWhipPan_Progress", Source = "EaseIn", Name = "Ease In", },
+				Input6 = InstanceInput { SourceOp = "PFXWhipPan_Progress", Source = "EaseOut", Name = "Ease Out", },
+			},
+			Outputs = {
+				MainOutput1 = InstanceOutput { SourceOp = "PFXWhipPan_Crop", Source = "Output", },
+			},
+			ViewInfo = GroupInfo {
+				Pos = { 0, 0 },
+			},
+			Tools = ordered() {
+				PFXWhipPan_Ctl = Custom {
+					CtrlWZoom = false,
+					UserControls = ordered() {
+						NumberIn2 = {
+							{ CCS_AddString = "Left", },
+							{ CCS_AddString = "Right", },
+							{ CCS_AddString = "Up", },
+							{ CCS_AddString = "Down", },
+							LINKS_Name = "Direction",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "ComboControl",
+							CC_LabelPosition = "Horizontal",
+							INP_Integer = false,
+							INP_Default = 0,
+							INP_MinScale = 0,
+							INP_MaxScale = 3,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 3,
+							ICS_ControlPage = "Controls",
+						},
+					},
+					Inputs = {
+						NumberIn1 = Input { SourceOp = "PFXWhipPan_Progress", Source = "Value", },
+						NameforNumber1 = Input { Value = "Progress", },
+						NumberIn2 = Input { Value = 0, },
+						NameforNumber2 = Input { Value = "Direction", },
+						NumberIn3 = Input { Value = 1, },
+						NameforNumber3 = Input { Value = "Distance", },
+						NumberIn4 = Input { Value = 0.6, },
+						NameforNumber4 = Input { Value = "Blur", },
+					},
+					ViewInfo = OperatorInfo {
+						Pos = { 0, 0 },
+					},
+				},
+				PFXWhipPan_ProgressLookup = LUTBezier {
+					KeyColorSplines = {
+						[0] = {
+							[0] = {
+								0,
+								RH = { 0.3333333333, 0.3333333333 },
+								Flags = { Linear = true, },
+							},
+							[1] = {
+								1,
+								LH = { 0.6666666667, 0.6666666667 },
+								Flags = { Linear = true, },
+							},
+						},
+					},
+					SplineColor = { Red = 255, Green = 255, Blue = 255, },
+				},
+				PFXWhipPan_Progress = LUTLookup {
+					Inputs = {
+						Source = Input {
+							Value = FuID { "Duration" },
+						},
+						Curve = Input {
+							Value = FuID { "Easing" },
+						},
+						EaseIn = Input {
+							Value = FuID { "Quint" },
+						},
+						EaseOut = Input {
+							Value = FuID { "Quint" },
+						},
+						Lookup = Input { SourceOp = "PFXWhipPan_ProgressLookup", Source = "Value", },
+					},
+				},
+				PFXWhipPan_Pan = Transform {
+					CtrlWZoom = false,
+					Inputs = {
+						Center = Input {
+							Expression = "Point(0.5 + 2*max(1, floor(PFXWhipPan_Ctl.NumberIn3 + 0.5))*PFXWhipPan_Ctl.NumberIn1*iif(PFXWhipPan_Ctl.NumberIn2 == 0, -1, iif(PFXWhipPan_Ctl.NumberIn2 == 1, 1, 0)), 0.5 + 2*max(1, floor(PFXWhipPan_Ctl.NumberIn3 + 0.5))*PFXWhipPan_Ctl.NumberIn1*iif(PFXWhipPan_Ctl.NumberIn2 == 2, 1, iif(PFXWhipPan_Ctl.NumberIn2 == 3, -1, 0)))",
+						},
+						Edges = Input { Value = 3, },
+					},
+					ViewInfo = OperatorInfo {
+						Pos = { 110, 0 },
+					},
+				},
+				PFXWhipPan_Smear = DirectionalBlur {
+					CtrlWZoom = false,
+					Inputs = {
+						Input = Input { SourceOp = "PFXWhipPan_Pan", Source = "Output", },
+						Type = Input { Value = 2, },
+						Angle = Input { Expression = "iif(PFXWhipPan_Ctl.NumberIn2 < 2, 0, 90)", },
+						Length = Input {
+							Expression = "(PFXWhipPan_Ctl.NumberIn4*0.35*(4*PFXWhipPan_Ctl.NumberIn1*(1 - PFXWhipPan_Ctl.NumberIn1))*(4*PFXWhipPan_Ctl.NumberIn1*(1 - PFXWhipPan_Ctl.NumberIn1)))",
+						},
+					},
+					ViewInfo = OperatorInfo {
+						Pos = { 220, 0 },
+					},
+				},
+				PFXWhipPan_Crop = Transform {
+					CtrlWZoom = false,
+					Inputs = {
+						Input = Input { SourceOp = "PFXWhipPan_Smear", Source = "Output", },
+						Size = Input {
+							Expression = "1 + 1.2*(PFXWhipPan_Ctl.NumberIn4*0.35*(4*PFXWhipPan_Ctl.NumberIn1*(1 - PFXWhipPan_Ctl.NumberIn1))*(4*PFXWhipPan_Ctl.NumberIn1*(1 - PFXWhipPan_Ctl.NumberIn1)))",
+						},
+					},
+					ViewInfo = OperatorInfo {
+						Pos = { 330, 0 },
+					},
+				},
+			},
+		},
+	},
+	ActiveTool = "PFXWhipPan",
+}

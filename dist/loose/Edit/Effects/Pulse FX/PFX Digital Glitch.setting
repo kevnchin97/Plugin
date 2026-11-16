@@ -1,0 +1,240 @@
+{
+	Tools = ordered() {
+		PFXDigitalGlitch = GroupOperator {
+			CtrlWZoom = false,
+			Inputs = ordered() {
+				MainInput1 = InstanceInput { SourceOp = "PFXDigitalGlitch_Tear", Source = "Input", },
+				Input1 = InstanceInput {
+					SourceOp = "PFXDigitalGlitch_Ctl",
+					Source = "NumberIn2",
+					Name = "Amount",
+					Default = 0.5,
+					MinScale = 0,
+					MaxScale = 1,
+				},
+				Input2 = InstanceInput {
+					SourceOp = "PFXDigitalGlitch_Ctl",
+					Source = "NumberIn3",
+					Name = "Frequency",
+					Default = 0.6,
+					MinScale = 0,
+					MaxScale = 1,
+				},
+				Input3 = InstanceInput {
+					SourceOp = "PFXDigitalGlitch_Ctl",
+					Source = "NumberIn4",
+					Name = "Hold Frames",
+					Default = 3,
+					MinScale = 1,
+					MaxScale = 12,
+				},
+				Input4 = InstanceInput {
+					SourceOp = "PFXDigitalGlitch_Ctl",
+					Source = "NumberIn5",
+					Name = "Band Size",
+					Default = 0.6,
+					MinScale = 0,
+					MaxScale = 1,
+				},
+				Input5 = InstanceInput {
+					SourceOp = "PFXDigitalGlitch_Ctl",
+					Source = "NumberIn6",
+					Name = "Colour Split",
+					Default = 0.5,
+					MinScale = 0,
+					MaxScale = 1,
+				},
+				Input6 = InstanceInput {
+					SourceOp = "PFXDigitalGlitch_Ctl",
+					Source = "NumberIn7",
+					Name = "Flicker",
+					Default = 0.3,
+					MinScale = 0,
+					MaxScale = 1,
+				},
+				Input7 = InstanceInput { SourceOp = "PFXDigitalGlitch_Ctl", Source = "NumberIn8", Name = "Envelope", Default = 3, },
+				Input8 = InstanceInput { SourceOp = "PFXDigitalGlitch_Progress", Source = "Curve", Name = "Curve", },
+				Input9 = InstanceInput { SourceOp = "PFXDigitalGlitch_Progress", Source = "EaseIn", Name = "Ease In", },
+				Input10 = InstanceInput { SourceOp = "PFXDigitalGlitch_Progress", Source = "EaseOut", Name = "Ease Out", },
+			},
+			Outputs = {
+				MainOutput1 = InstanceOutput { SourceOp = "PFXDigitalGlitch_Flicker", Source = "Output", },
+			},
+			ViewInfo = GroupInfo {
+				Pos = { 0, 0 },
+			},
+			Tools = ordered() {
+				PFXDigitalGlitch_Ctl = Custom {
+					CtrlWZoom = false,
+					UserControls = ordered() {
+						NumberIn8 = {
+							{ CCS_AddString = "Hit (fade out)", },
+							{ CCS_AddString = "Build (fade in)", },
+							{ CCS_AddString = "Pulse (peak mid-clip)", },
+							{ CCS_AddString = "Constant", },
+							LINKS_Name = "Envelope",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "ComboControl",
+							CC_LabelPosition = "Horizontal",
+							INP_Integer = false,
+							INP_Default = 3,
+							INP_MinScale = 0,
+							INP_MaxScale = 3,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 3,
+							ICS_ControlPage = "Controls",
+						},
+					},
+					Inputs = {
+						NumberIn1 = Input { SourceOp = "PFXDigitalGlitch_Progress", Source = "Value", },
+						NameforNumber1 = Input { Value = "Progress", },
+						NumberIn2 = Input { Value = 0.5, },
+						NameforNumber2 = Input { Value = "Amount", },
+						NumberIn3 = Input { Value = 0.6, },
+						NameforNumber3 = Input { Value = "Frequency", },
+						NumberIn4 = Input { Value = 3, },
+						NameforNumber4 = Input { Value = "Hold Frames", },
+						NumberIn5 = Input { Value = 0.6, },
+						NameforNumber5 = Input { Value = "Band Size", },
+						NumberIn6 = Input { Value = 0.5, },
+						NameforNumber6 = Input { Value = "Colour Split", },
+						NumberIn7 = Input { Value = 0.3, },
+						NameforNumber7 = Input { Value = "Flicker", },
+						NumberIn8 = Input { Value = 3, },
+						NameforNumber8 = Input { Value = "Envelope", },
+					},
+					ViewInfo = OperatorInfo {
+						Pos = { 0, 0 },
+					},
+				},
+				PFXDigitalGlitch_ProgressLookup = LUTBezier {
+					KeyColorSplines = {
+						[0] = {
+							[0] = {
+								0,
+								RH = { 0.3333333333, 0.3333333333 },
+								Flags = { Linear = true, },
+							},
+							[1] = {
+								1,
+								LH = { 0.6666666667, 0.6666666667 },
+								Flags = { Linear = true, },
+							},
+						},
+					},
+					SplineColor = { Red = 255, Green = 255, Blue = 255, },
+				},
+				PFXDigitalGlitch_Progress = LUTLookup {
+					Inputs = {
+						Source = Input {
+							Value = FuID { "Duration" },
+						},
+						Curve = Input {
+							Value = FuID { "Easing" },
+						},
+						EaseIn = Input {
+							Value = FuID { "Sine" },
+						},
+						EaseOut = Input {
+							Value = FuID { "Sine" },
+						},
+						Lookup = Input { SourceOp = "PFXDigitalGlitch_ProgressLookup", Source = "Value", },
+					},
+				},
+				PFXDigitalGlitch_Bands = FastNoise {
+					CtrlWZoom = false,
+					Inputs = {
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						Detail = Input { Value = 1, },
+						Contrast = Input { Value = 5, },
+						Brightness = Input { Value = -0.5, },
+						LockXY = Input { Value = 0, },
+						XScale = Input { Value = 0.05, },
+						YScale = Input { Expression = "3 + (1 - PFXDigitalGlitch_Ctl.NumberIn5)*60", },
+						Discontinuous = Input { Value = 1, },
+						Seethe = Input { Expression = "floor(time/max(1, PFXDigitalGlitch_Ctl.NumberIn4))*7.31", },
+						SeetheRate = Input { Value = 0, },
+						Color1Alpha = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo {
+						Pos = { 110, 0 },
+					},
+				},
+				PFXDigitalGlitch_BandClamp = BrightnessContrast {
+					CtrlWZoom = false,
+					Inputs = {
+						Input = Input { SourceOp = "PFXDigitalGlitch_Bands", Source = "Output", },
+						ClipBlack = Input { Value = 1, },
+						ClipWhite = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo {
+						Pos = { 220, 0 },
+					},
+				},
+				PFXDigitalGlitch_Tear = Displace {
+					CtrlWZoom = false,
+					Inputs = {
+						Foreground = Input { SourceOp = "PFXDigitalGlitch_BandClamp", Source = "Output", },
+						Type = Input { Value = 1, },
+						XChannel = Input { Value = 4, },
+						YChannel = Input { Value = 4, },
+						XRefraction = Input {
+							Expression = "PFXDigitalGlitch_Ctl.NumberIn2*0.2*(iif(((sin((floor(time/max(1, PFXDigitalGlitch_Ctl.NumberIn4)) + 17)*12.9898)*43758.5453) % 1) < PFXDigitalGlitch_Ctl.NumberIn3, 1, 0)*(iif(PFXDigitalGlitch_Ctl.NumberIn8 == 0, 1 - PFXDigitalGlitch_Ctl.NumberIn1, iif(PFXDigitalGlitch_Ctl.NumberIn8 == 1, PFXDigitalGlitch_Ctl.NumberIn1, iif(PFXDigitalGlitch_Ctl.NumberIn8 == 2, 4*PFXDigitalGlitch_Ctl.NumberIn1*(1 - PFXDigitalGlitch_Ctl.NumberIn1), 1)))))*iif(((sin((floor(time/max(1, PFXDigitalGlitch_Ctl.NumberIn4)) + 3)*12.9898)*43758.5453) % 1) < 0.5, -1, 1)",
+						},
+						YRefraction = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo {
+						Pos = { 330, 0 },
+					},
+				},
+				PFXDigitalGlitch_Red = Transform {
+					CtrlWZoom = false,
+					Inputs = {
+						Input = Input { SourceOp = "PFXDigitalGlitch_Tear", Source = "Output", },
+						Center = Input {
+							Expression = "Point(0.5 + (PFXDigitalGlitch_Ctl.NumberIn6*0.02*(iif(((sin((floor(time/max(1, PFXDigitalGlitch_Ctl.NumberIn4)) + 17)*12.9898)*43758.5453) % 1) < PFXDigitalGlitch_Ctl.NumberIn3, 1, 0)*(iif(PFXDigitalGlitch_Ctl.NumberIn8 == 0, 1 - PFXDigitalGlitch_Ctl.NumberIn1, iif(PFXDigitalGlitch_Ctl.NumberIn8 == 1, PFXDigitalGlitch_Ctl.NumberIn1, iif(PFXDigitalGlitch_Ctl.NumberIn8 == 2, 4*PFXDigitalGlitch_Ctl.NumberIn1*(1 - PFXDigitalGlitch_Ctl.NumberIn1), 1)))))*(0.5 + ((sin((floor(time/max(1, PFXDigitalGlitch_Ctl.NumberIn4)) + 29)*12.9898)*43758.5453) % 1))), 0.5)",
+						},
+						Edges = Input { Value = 3, },
+						ProcessGreen = Input { Value = 0, },
+						ProcessBlue = Input { Value = 0, },
+						ProcessAlpha = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo {
+						Pos = { 440, 0 },
+					},
+				},
+				PFXDigitalGlitch_Blue = Transform {
+					CtrlWZoom = false,
+					Inputs = {
+						Input = Input { SourceOp = "PFXDigitalGlitch_Red", Source = "Output", },
+						Center = Input {
+							Expression = "Point(0.5 - (PFXDigitalGlitch_Ctl.NumberIn6*0.02*(iif(((sin((floor(time/max(1, PFXDigitalGlitch_Ctl.NumberIn4)) + 17)*12.9898)*43758.5453) % 1) < PFXDigitalGlitch_Ctl.NumberIn3, 1, 0)*(iif(PFXDigitalGlitch_Ctl.NumberIn8 == 0, 1 - PFXDigitalGlitch_Ctl.NumberIn1, iif(PFXDigitalGlitch_Ctl.NumberIn8 == 1, PFXDigitalGlitch_Ctl.NumberIn1, iif(PFXDigitalGlitch_Ctl.NumberIn8 == 2, 4*PFXDigitalGlitch_Ctl.NumberIn1*(1 - PFXDigitalGlitch_Ctl.NumberIn1), 1)))))*(0.5 + ((sin((floor(time/max(1, PFXDigitalGlitch_Ctl.NumberIn4)) + 29)*12.9898)*43758.5453) % 1))), 0.5)",
+						},
+						Edges = Input { Value = 3, },
+						ProcessRed = Input { Value = 0, },
+						ProcessGreen = Input { Value = 0, },
+						ProcessAlpha = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo {
+						Pos = { 550, 0 },
+					},
+				},
+				PFXDigitalGlitch_Flicker = BrightnessContrast {
+					CtrlWZoom = false,
+					Inputs = {
+						Input = Input { SourceOp = "PFXDigitalGlitch_Blue", Source = "Output", },
+						Gain = Input {
+							Expression = "1 + PFXDigitalGlitch_Ctl.NumberIn7*(iif(((sin((floor(time/max(1, PFXDigitalGlitch_Ctl.NumberIn4)) + 17)*12.9898)*43758.5453) % 1) < PFXDigitalGlitch_Ctl.NumberIn3, 1, 0)*(iif(PFXDigitalGlitch_Ctl.NumberIn8 == 0, 1 - PFXDigitalGlitch_Ctl.NumberIn1, iif(PFXDigitalGlitch_Ctl.NumberIn8 == 1, PFXDigitalGlitch_Ctl.NumberIn1, iif(PFXDigitalGlitch_Ctl.NumberIn8 == 2, 4*PFXDigitalGlitch_Ctl.NumberIn1*(1 - PFXDigitalGlitch_Ctl.NumberIn1), 1)))))*(((sin((floor(time) + 41)*12.9898)*43758.5453) % 1) - 0.4)",
+						},
+					},
+					ViewInfo = OperatorInfo {
+						Pos = { 660, 0 },
+					},
+				},
+			},
+		},
+	},
+	ActiveTool = "PFXDigitalGlitch",
+}

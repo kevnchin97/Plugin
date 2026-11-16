@@ -1,0 +1,161 @@
+{
+	Tools = ordered() {
+		PFXFlashDip = GroupOperator {
+			CtrlWZoom = false,
+			Inputs = ordered() {
+				MainInput1 = InstanceInput { SourceOp = "PFXFlashDip_AB", Source = "Background", },
+				MainInput2 = InstanceInput { SourceOp = "PFXFlashDip_AB", Source = "Foreground", },
+				Input1 = InstanceInput {
+					SourceOp = "PFXFlashDip_Ctl",
+					Source = "NumberIn2",
+					Name = "Intensity",
+					Default = 1,
+					MinScale = 0,
+					MaxScale = 1,
+				},
+				Input2 = InstanceInput {
+					SourceOp = "PFXFlashDip_Ctl",
+					Source = "NumberIn3",
+					Name = "Crossfade",
+					Default = 0.15,
+					MinScale = 0,
+					MaxScale = 1,
+				},
+				Input3 = InstanceInput {
+					SourceOp = "PFXFlashDip_Ctl",
+					Source = "NumberIn4",
+					Name = "Exposure Boost",
+					Default = 0.5,
+					MinScale = 0,
+					MaxScale = 1,
+				},
+				Input4 = InstanceInput {
+					SourceOp = "PFXFlashDip_Colour",
+					Source = "TopLeftRed",
+					Name = "Flash Colour",
+					ControlGroup = 1,
+					Default = 1,
+				},
+				Input5 = InstanceInput { SourceOp = "PFXFlashDip_Colour", Source = "TopLeftGreen", ControlGroup = 1, Default = 1, },
+				Input6 = InstanceInput { SourceOp = "PFXFlashDip_Colour", Source = "TopLeftBlue", ControlGroup = 1, Default = 1, },
+				Input7 = InstanceInput { SourceOp = "PFXFlashDip_Progress", Source = "Curve", Name = "Curve", },
+				Input8 = InstanceInput { SourceOp = "PFXFlashDip_Progress", Source = "EaseIn", Name = "Ease In", },
+				Input9 = InstanceInput { SourceOp = "PFXFlashDip_Progress", Source = "EaseOut", Name = "Ease Out", },
+			},
+			Outputs = {
+				MainOutput1 = InstanceOutput { SourceOp = "PFXFlashDip_Over", Source = "Output", },
+			},
+			ViewInfo = GroupInfo {
+				Pos = { 0, 0 },
+			},
+			Tools = ordered() {
+				PFXFlashDip_Ctl = Custom {
+					CtrlWZoom = false,
+					UserControls = ordered() { },
+					Inputs = {
+						NumberIn1 = Input { SourceOp = "PFXFlashDip_Progress", Source = "Value", },
+						NameforNumber1 = Input { Value = "Progress", },
+						NumberIn2 = Input { Value = 1, },
+						NameforNumber2 = Input { Value = "Intensity", },
+						NumberIn3 = Input { Value = 0.15, },
+						NameforNumber3 = Input { Value = "Crossfade", },
+						NumberIn4 = Input { Value = 0.5, },
+						NameforNumber4 = Input { Value = "Exposure Boost", },
+					},
+					ViewInfo = OperatorInfo {
+						Pos = { 0, 0 },
+					},
+				},
+				PFXFlashDip_ProgressLookup = LUTBezier {
+					KeyColorSplines = {
+						[0] = {
+							[0] = {
+								0,
+								RH = { 0.3333333333, 0.3333333333 },
+								Flags = { Linear = true, },
+							},
+							[1] = {
+								1,
+								LH = { 0.6666666667, 0.6666666667 },
+								Flags = { Linear = true, },
+							},
+						},
+					},
+					SplineColor = { Red = 255, Green = 255, Blue = 255, },
+				},
+				PFXFlashDip_Progress = LUTLookup {
+					Inputs = {
+						Source = Input {
+							Value = FuID { "Transition" },
+						},
+						Curve = Input {
+							Value = FuID { "Easing" },
+						},
+						EaseIn = Input {
+							Value = FuID { "Sine" },
+						},
+						EaseOut = Input {
+							Value = FuID { "Sine" },
+						},
+						Lookup = Input { SourceOp = "PFXFlashDip_ProgressLookup", Source = "Value", },
+					},
+				},
+				PFXFlashDip_AB = Dissolve {
+					CtrlWZoom = false,
+					Transitions = { [0] = "DFTDissolve", },
+					Inputs = {
+						Mix = Input {
+							Expression = "min(1, max(0, (PFXFlashDip_Ctl.NumberIn1 - 0.5)/max(0.001, PFXFlashDip_Ctl.NumberIn3) + 0.5))",
+						},
+					},
+					ViewInfo = OperatorInfo {
+						Pos = { 110, 0 },
+					},
+				},
+				PFXFlashDip_Boost = BrightnessContrast {
+					CtrlWZoom = false,
+					Inputs = {
+						Input = Input { SourceOp = "PFXFlashDip_AB", Source = "Output", },
+						Gain = Input {
+							Expression = "1 + PFXFlashDip_Ctl.NumberIn4*2*min(1, max(0, PFXFlashDip_Ctl.NumberIn2*(4*PFXFlashDip_Ctl.NumberIn1*(1 - PFXFlashDip_Ctl.NumberIn1))))",
+						},
+					},
+					ViewInfo = OperatorInfo {
+						Pos = { 220, 0 },
+					},
+				},
+				PFXFlashDip_Colour = Background {
+					CtrlWZoom = false,
+					Inputs = {
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						TopLeftRed = Input { Value = 1, },
+						TopLeftGreen = Input { Value = 1, },
+						TopLeftBlue = Input { Value = 1, },
+						TopLeftAlpha = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo {
+						Pos = { 330, 0 },
+					},
+				},
+				PFXFlashDip_Over = Merge {
+					CtrlWZoom = false,
+					Inputs = {
+						Background = Input { SourceOp = "PFXFlashDip_Boost", Source = "Output", },
+						Foreground = Input { SourceOp = "PFXFlashDip_Colour", Source = "Output", },
+						Size = Input { Value = 3, },
+						Blend = Input {
+							Expression = "min(1, max(0, PFXFlashDip_Ctl.NumberIn2*(4*PFXFlashDip_Ctl.NumberIn1*(1 - PFXFlashDip_Ctl.NumberIn1))))",
+						},
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo {
+						Pos = { 440, 0 },
+					},
+				},
+			},
+		},
+	},
+	ActiveTool = "PFXFlashDip",
+}

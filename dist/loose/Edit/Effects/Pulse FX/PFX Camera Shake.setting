@@ -1,0 +1,139 @@
+{
+	Tools = ordered() {
+		PFXCameraShake = GroupOperator {
+			CtrlWZoom = false,
+			Inputs = ordered() {
+				MainInput1 = InstanceInput { SourceOp = "PFXCameraShake_Xf", Source = "Input", },
+				Input1 = InstanceInput {
+					SourceOp = "PFXCameraShake_Ctl",
+					Source = "NumberIn2",
+					Name = "Strength",
+					Default = 0.35,
+					MinScale = 0,
+					MaxScale = 1,
+				},
+				Input2 = InstanceInput {
+					SourceOp = "PFXCameraShake_Ctl",
+					Source = "NumberIn3",
+					Name = "Speed",
+					Default = 1,
+					MinScale = 0.1,
+					MaxScale = 4,
+				},
+				Input3 = InstanceInput {
+					SourceOp = "PFXCameraShake_Ctl",
+					Source = "NumberIn4",
+					Name = "Rotation",
+					Default = 0.3,
+					MinScale = 0,
+					MaxScale = 1,
+				},
+				Input4 = InstanceInput { SourceOp = "PFXCameraShake_Ctl", Source = "NumberIn5", Name = "Envelope", Default = 3, },
+				Input5 = InstanceInput { SourceOp = "PFXCameraShake_Xf", Source = "MotionBlur", Name = "Motion Blur", Default = 0, },
+				Input6 = InstanceInput { SourceOp = "PFXCameraShake_Progress", Source = "Curve", Name = "Curve", },
+				Input7 = InstanceInput { SourceOp = "PFXCameraShake_Progress", Source = "EaseIn", Name = "Ease In", },
+				Input8 = InstanceInput { SourceOp = "PFXCameraShake_Progress", Source = "EaseOut", Name = "Ease Out", },
+			},
+			Outputs = {
+				MainOutput1 = InstanceOutput { SourceOp = "PFXCameraShake_Xf", Source = "Output", },
+			},
+			ViewInfo = GroupInfo {
+				Pos = { 0, 0 },
+			},
+			Tools = ordered() {
+				PFXCameraShake_Ctl = Custom {
+					CtrlWZoom = false,
+					UserControls = ordered() {
+						NumberIn5 = {
+							{ CCS_AddString = "Hit (fade out)", },
+							{ CCS_AddString = "Build (fade in)", },
+							{ CCS_AddString = "Pulse (peak mid-clip)", },
+							{ CCS_AddString = "Constant", },
+							LINKS_Name = "Envelope",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "ComboControl",
+							CC_LabelPosition = "Horizontal",
+							INP_Integer = false,
+							INP_Default = 3,
+							INP_MinScale = 0,
+							INP_MaxScale = 3,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 3,
+							ICS_ControlPage = "Controls",
+						},
+					},
+					Inputs = {
+						NumberIn1 = Input { SourceOp = "PFXCameraShake_Progress", Source = "Value", },
+						NameforNumber1 = Input { Value = "Progress", },
+						NumberIn2 = Input { Value = 0.35, },
+						NameforNumber2 = Input { Value = "Strength", },
+						NumberIn3 = Input { Value = 1, },
+						NameforNumber3 = Input { Value = "Speed", },
+						NumberIn4 = Input { Value = 0.3, },
+						NameforNumber4 = Input { Value = "Rotation", },
+						NumberIn5 = Input { Value = 3, },
+						NameforNumber5 = Input { Value = "Envelope", },
+					},
+					ViewInfo = OperatorInfo {
+						Pos = { 0, 0 },
+					},
+				},
+				PFXCameraShake_ProgressLookup = LUTBezier {
+					KeyColorSplines = {
+						[0] = {
+							[0] = {
+								0,
+								RH = { 0.3333333333, 0.3333333333 },
+								Flags = { Linear = true, },
+							},
+							[1] = {
+								1,
+								LH = { 0.6666666667, 0.6666666667 },
+								Flags = { Linear = true, },
+							},
+						},
+					},
+					SplineColor = { Red = 255, Green = 255, Blue = 255, },
+				},
+				PFXCameraShake_Progress = LUTLookup {
+					Inputs = {
+						Source = Input {
+							Value = FuID { "Duration" },
+						},
+						Curve = Input {
+							Value = FuID { "Easing" },
+						},
+						EaseIn = Input {
+							Value = FuID { "Sine" },
+						},
+						EaseOut = Input {
+							Value = FuID { "Sine" },
+						},
+						Lookup = Input { SourceOp = "PFXCameraShake_ProgressLookup", Source = "Value", },
+					},
+				},
+				PFXCameraShake_Xf = Transform {
+					CtrlWZoom = false,
+					Inputs = {
+						Center = Input {
+							Expression = "Point(0.5 + (PFXCameraShake_Ctl.NumberIn2*0.04*(iif(PFXCameraShake_Ctl.NumberIn5 == 0, 1 - PFXCameraShake_Ctl.NumberIn1, iif(PFXCameraShake_Ctl.NumberIn5 == 1, PFXCameraShake_Ctl.NumberIn1, iif(PFXCameraShake_Ctl.NumberIn5 == 2, 4*PFXCameraShake_Ctl.NumberIn1*(1 - PFXCameraShake_Ctl.NumberIn1), 1)))))*(sin((time*PFXCameraShake_Ctl.NumberIn3*1.1) + 1.3) + 0.6*sin((time*PFXCameraShake_Ctl.NumberIn3*1.1)*2.31 + 4.1) + 0.3*sin((time*PFXCameraShake_Ctl.NumberIn3*1.1)*4.73 + 0.7))/1.9, 0.5 + (PFXCameraShake_Ctl.NumberIn2*0.04*(iif(PFXCameraShake_Ctl.NumberIn5 == 0, 1 - PFXCameraShake_Ctl.NumberIn1, iif(PFXCameraShake_Ctl.NumberIn5 == 1, PFXCameraShake_Ctl.NumberIn1, iif(PFXCameraShake_Ctl.NumberIn5 == 2, 4*PFXCameraShake_Ctl.NumberIn1*(1 - PFXCameraShake_Ctl.NumberIn1), 1)))))*1.78*(sin((time*PFXCameraShake_Ctl.NumberIn3*1.1)*1.13 + 5.2) + 0.6*sin((time*PFXCameraShake_Ctl.NumberIn3*1.1)*2.57 + 2.2) + 0.3*sin((time*PFXCameraShake_Ctl.NumberIn3*1.1)*5.11 + 3.9))/1.9)",
+						},
+						Angle = Input {
+							Expression = "PFXCameraShake_Ctl.NumberIn4*4*(iif(PFXCameraShake_Ctl.NumberIn5 == 0, 1 - PFXCameraShake_Ctl.NumberIn1, iif(PFXCameraShake_Ctl.NumberIn5 == 1, PFXCameraShake_Ctl.NumberIn1, iif(PFXCameraShake_Ctl.NumberIn5 == 2, 4*PFXCameraShake_Ctl.NumberIn1*(1 - PFXCameraShake_Ctl.NumberIn1), 1))))*PFXCameraShake_Ctl.NumberIn2*(sin((time*PFXCameraShake_Ctl.NumberIn3*1.1)*0.83 + 2.6) + 0.5*sin((time*PFXCameraShake_Ctl.NumberIn3*1.1)*1.91 + 0.4))/1.5",
+						},
+						Size = Input {
+							Expression = "1 + 4*(PFXCameraShake_Ctl.NumberIn2*0.04*(iif(PFXCameraShake_Ctl.NumberIn5 == 0, 1 - PFXCameraShake_Ctl.NumberIn1, iif(PFXCameraShake_Ctl.NumberIn5 == 1, PFXCameraShake_Ctl.NumberIn1, iif(PFXCameraShake_Ctl.NumberIn5 == 2, 4*PFXCameraShake_Ctl.NumberIn1*(1 - PFXCameraShake_Ctl.NumberIn1), 1)))))",
+						},
+						Edges = Input { Value = 3, },
+						MotionBlur = Input { Value = 0, },
+						Quality = Input { Value = 4, },
+					},
+					ViewInfo = OperatorInfo {
+						Pos = { 110, 0 },
+					},
+				},
+			},
+		},
+	},
+	ActiveTool = "PFXCameraShake",
+}

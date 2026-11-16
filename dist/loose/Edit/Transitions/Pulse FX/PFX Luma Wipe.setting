@@ -1,0 +1,175 @@
+{
+	Tools = ordered() {
+		PFXLumaWipe = GroupOperator {
+			CtrlWZoom = false,
+			Inputs = ordered() {
+				MainInput1 = InstanceInput { SourceOp = "PFXLumaWipe_AB", Source = "Background", },
+				MainInput2 = InstanceInput { SourceOp = "PFXLumaWipe_AB", Source = "Foreground", },
+				Input1 = InstanceInput {
+					SourceOp = "PFXLumaWipe_Ctl",
+					Source = "NumberIn2",
+					Name = "Angle",
+					Default = 0,
+					MinScale = -180,
+					MaxScale = 180,
+				},
+				Input2 = InstanceInput {
+					SourceOp = "PFXLumaWipe_Ctl",
+					Source = "NumberIn3",
+					Name = "Organic",
+					Default = 0.35,
+					MinScale = 0,
+					MaxScale = 1,
+				},
+				Input3 = InstanceInput {
+					SourceOp = "PFXLumaWipe_Noise",
+					Source = "XScale",
+					Name = "Pattern Scale",
+					Default = 4,
+					MinScale = 1,
+					MaxScale = 20,
+				},
+				Input4 = InstanceInput {
+					SourceOp = "PFXLumaWipe_AB",
+					Source = "DFTLumaRamp.Softness",
+					Name = "Softness",
+					Default = 0.15,
+					MinScale = 0,
+					MaxScale = 1,
+				},
+				Input5 = InstanceInput { SourceOp = "PFXLumaWipe_Progress", Source = "Curve", Name = "Curve", },
+				Input6 = InstanceInput { SourceOp = "PFXLumaWipe_Progress", Source = "EaseIn", Name = "Ease In", },
+				Input7 = InstanceInput { SourceOp = "PFXLumaWipe_Progress", Source = "EaseOut", Name = "Ease Out", },
+			},
+			Outputs = {
+				MainOutput1 = InstanceOutput { SourceOp = "PFXLumaWipe_AB", Source = "Output", },
+			},
+			ViewInfo = GroupInfo {
+				Pos = { 0, 0 },
+			},
+			Tools = ordered() {
+				PFXLumaWipe_Ctl = Custom {
+					CtrlWZoom = false,
+					UserControls = ordered() { },
+					Inputs = {
+						NumberIn1 = Input { SourceOp = "PFXLumaWipe_Progress", Source = "Value", },
+						NameforNumber1 = Input { Value = "Progress", },
+						NumberIn2 = Input { Value = 0, },
+						NameforNumber2 = Input { Value = "Angle", },
+						NumberIn3 = Input { Value = 0.35, },
+						NameforNumber3 = Input { Value = "Organic", },
+					},
+					ViewInfo = OperatorInfo {
+						Pos = { 0, 0 },
+					},
+				},
+				PFXLumaWipe_ProgressLookup = LUTBezier {
+					KeyColorSplines = {
+						[0] = {
+							[0] = {
+								0,
+								RH = { 0.3333333333, 0.3333333333 },
+								Flags = { Linear = true, },
+							},
+							[1] = {
+								1,
+								LH = { 0.6666666667, 0.6666666667 },
+								Flags = { Linear = true, },
+							},
+						},
+					},
+					SplineColor = { Red = 255, Green = 255, Blue = 255, },
+				},
+				PFXLumaWipe_Progress = LUTLookup {
+					Inputs = {
+						Source = Input {
+							Value = FuID { "Transition" },
+						},
+						Curve = Input {
+							Value = FuID { "Easing" },
+						},
+						EaseIn = Input {
+							Value = FuID { "Sine" },
+						},
+						EaseOut = Input {
+							Value = FuID { "Sine" },
+						},
+						Lookup = Input { SourceOp = "PFXLumaWipe_ProgressLookup", Source = "Value", },
+					},
+				},
+				PFXLumaWipe_Ramp = Background {
+					CtrlWZoom = false,
+					Inputs = {
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						Type = Input {
+							Value = FuID { "Gradient" },
+						},
+						Gradient = Input {
+							Value = Gradient {
+								Colors = {
+									[0] = { 0, 0, 0, 1 },
+									[1] = { 1, 1, 1, 1 },
+								},
+							},
+						},
+						Start = Input {
+							Expression = "Point(0.5 - 0.5*cos(PFXLumaWipe_Ctl.NumberIn2*pi/180), 0.5 - 0.5*sin(PFXLumaWipe_Ctl.NumberIn2*pi/180))",
+						},
+						End = Input {
+							Expression = "Point(0.5 + 0.5*cos(PFXLumaWipe_Ctl.NumberIn2*pi/180), 0.5 + 0.5*sin(PFXLumaWipe_Ctl.NumberIn2*pi/180))",
+						},
+					},
+					ViewInfo = OperatorInfo {
+						Pos = { 110, 0 },
+					},
+				},
+				PFXLumaWipe_Noise = FastNoise {
+					CtrlWZoom = false,
+					Inputs = {
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						Detail = Input { Value = 4, },
+						Contrast = Input { Value = 1.5, },
+						XScale = Input { Value = 4, },
+						SeetheRate = Input { Value = 0, },
+						Color1Alpha = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo {
+						Pos = { 220, 0 },
+					},
+				},
+				PFXLumaWipe_Pattern = Merge {
+					CtrlWZoom = false,
+					Inputs = {
+						Background = Input { SourceOp = "PFXLumaWipe_Ramp", Source = "Output", },
+						Foreground = Input { SourceOp = "PFXLumaWipe_Noise", Source = "Output", },
+						Blend = Input { Expression = "min(1, max(0, PFXLumaWipe_Ctl.NumberIn3))", },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo {
+						Pos = { 330, 0 },
+					},
+				},
+				PFXLumaWipe_AB = Dissolve {
+					CtrlWZoom = false,
+					Transitions = { [0] = "DFTLumaRamp", },
+					Inputs = {
+						Operation = Input {
+							Value = FuID { "DFTLumaRamp" },
+						},
+						Map = Input { SourceOp = "PFXLumaWipe_Pattern", Source = "Output", },
+						Mix = Input { Expression = "PFXLumaWipe_Ctl.NumberIn1", },
+						["DFTLumaRamp.Softness"] = Input { Value = 0.15, },
+					},
+					ViewInfo = OperatorInfo {
+						Pos = { 440, 0 },
+					},
+				},
+			},
+		},
+	},
+	ActiveTool = "PFXLumaWipe",
+}

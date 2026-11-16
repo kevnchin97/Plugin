@@ -1,0 +1,168 @@
+{
+	Tools = ordered() {
+		PFXFlashStrobe = GroupOperator {
+			CtrlWZoom = false,
+			Inputs = ordered() {
+				MainInput1 = InstanceInput { SourceOp = "PFXFlashStrobe_Boost", Source = "Input", },
+				Input1 = InstanceInput {
+					SourceOp = "PFXFlashStrobe_Ctl",
+					Source = "NumberIn2",
+					Name = "Intensity",
+					Default = 1,
+					MinScale = 0,
+					MaxScale = 1,
+				},
+				Input2 = InstanceInput {
+					SourceOp = "PFXFlashStrobe_Ctl",
+					Source = "NumberIn3",
+					Name = "Strobe Frames",
+					Default = 0,
+					MinScale = 0,
+					MaxScale = 24,
+				},
+				Input3 = InstanceInput {
+					SourceOp = "PFXFlashStrobe_Ctl",
+					Source = "NumberIn4",
+					Name = "Exposure Boost",
+					Default = 0.5,
+					MinScale = 0,
+					MaxScale = 1,
+				},
+				Input4 = InstanceInput { SourceOp = "PFXFlashStrobe_Ctl", Source = "NumberIn5", Name = "Envelope", Default = 0, },
+				Input5 = InstanceInput {
+					SourceOp = "PFXFlashStrobe_Colour",
+					Source = "TopLeftRed",
+					Name = "Flash Colour",
+					ControlGroup = 1,
+					Default = 1,
+				},
+				Input6 = InstanceInput { SourceOp = "PFXFlashStrobe_Colour", Source = "TopLeftGreen", ControlGroup = 1, Default = 1, },
+				Input7 = InstanceInput { SourceOp = "PFXFlashStrobe_Colour", Source = "TopLeftBlue", ControlGroup = 1, Default = 1, },
+				Input8 = InstanceInput { SourceOp = "PFXFlashStrobe_Progress", Source = "Curve", Name = "Curve", },
+				Input9 = InstanceInput { SourceOp = "PFXFlashStrobe_Progress", Source = "EaseIn", Name = "Ease In", },
+				Input10 = InstanceInput { SourceOp = "PFXFlashStrobe_Progress", Source = "EaseOut", Name = "Ease Out", },
+			},
+			Outputs = {
+				MainOutput1 = InstanceOutput { SourceOp = "PFXFlashStrobe_Over", Source = "Output", },
+			},
+			ViewInfo = GroupInfo {
+				Pos = { 0, 0 },
+			},
+			Tools = ordered() {
+				PFXFlashStrobe_Ctl = Custom {
+					CtrlWZoom = false,
+					UserControls = ordered() {
+						NumberIn5 = {
+							{ CCS_AddString = "Hit (fade out)", },
+							{ CCS_AddString = "Build (fade in)", },
+							{ CCS_AddString = "Pulse (peak mid-clip)", },
+							{ CCS_AddString = "Constant", },
+							LINKS_Name = "Envelope",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "ComboControl",
+							CC_LabelPosition = "Horizontal",
+							INP_Integer = false,
+							INP_Default = 0,
+							INP_MinScale = 0,
+							INP_MaxScale = 3,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 3,
+							ICS_ControlPage = "Controls",
+						},
+					},
+					Inputs = {
+						NumberIn1 = Input { SourceOp = "PFXFlashStrobe_Progress", Source = "Value", },
+						NameforNumber1 = Input { Value = "Progress", },
+						NumberIn2 = Input { Value = 1, },
+						NameforNumber2 = Input { Value = "Intensity", },
+						NumberIn3 = Input { Value = 0, },
+						NameforNumber3 = Input { Value = "Strobe Frames", },
+						NumberIn4 = Input { Value = 0.5, },
+						NameforNumber4 = Input { Value = "Exposure Boost", },
+						NumberIn5 = Input { Value = 0, },
+						NameforNumber5 = Input { Value = "Envelope", },
+					},
+					ViewInfo = OperatorInfo {
+						Pos = { 0, 0 },
+					},
+				},
+				PFXFlashStrobe_ProgressLookup = LUTBezier {
+					KeyColorSplines = {
+						[0] = {
+							[0] = {
+								0,
+								RH = { 0.3333333333, 0.3333333333 },
+								Flags = { Linear = true, },
+							},
+							[1] = {
+								1,
+								LH = { 0.6666666667, 0.6666666667 },
+								Flags = { Linear = true, },
+							},
+						},
+					},
+					SplineColor = { Red = 255, Green = 255, Blue = 255, },
+				},
+				PFXFlashStrobe_Progress = LUTLookup {
+					Inputs = {
+						Source = Input {
+							Value = FuID { "Duration" },
+						},
+						Curve = Input {
+							Value = FuID { "Easing" },
+						},
+						EaseIn = Input {
+							Value = FuID { "Sine" },
+						},
+						EaseOut = Input {
+							Value = FuID { "Quad" },
+						},
+						Lookup = Input { SourceOp = "PFXFlashStrobe_ProgressLookup", Source = "Value", },
+					},
+				},
+				PFXFlashStrobe_Boost = BrightnessContrast {
+					CtrlWZoom = false,
+					Inputs = {
+						Gain = Input {
+							Expression = "1 + PFXFlashStrobe_Ctl.NumberIn4*2*min(1, max(0, PFXFlashStrobe_Ctl.NumberIn2*(iif(PFXFlashStrobe_Ctl.NumberIn5 == 0, 1 - PFXFlashStrobe_Ctl.NumberIn1, iif(PFXFlashStrobe_Ctl.NumberIn5 == 1, PFXFlashStrobe_Ctl.NumberIn1, iif(PFXFlashStrobe_Ctl.NumberIn5 == 2, 4*PFXFlashStrobe_Ctl.NumberIn1*(1 - PFXFlashStrobe_Ctl.NumberIn1), 1))))*iif(PFXFlashStrobe_Ctl.NumberIn3 < 1, 1, iif(floor(time/max(1, PFXFlashStrobe_Ctl.NumberIn3)) % 2 == 0, 1, 0))))",
+						},
+					},
+					ViewInfo = OperatorInfo {
+						Pos = { 110, 0 },
+					},
+				},
+				PFXFlashStrobe_Colour = Background {
+					CtrlWZoom = false,
+					Inputs = {
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						TopLeftRed = Input { Value = 1, },
+						TopLeftGreen = Input { Value = 1, },
+						TopLeftBlue = Input { Value = 1, },
+						TopLeftAlpha = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo {
+						Pos = { 220, 0 },
+					},
+				},
+				PFXFlashStrobe_Over = Merge {
+					CtrlWZoom = false,
+					Inputs = {
+						Background = Input { SourceOp = "PFXFlashStrobe_Boost", Source = "Output", },
+						Foreground = Input { SourceOp = "PFXFlashStrobe_Colour", Source = "Output", },
+						Size = Input { Value = 3, },
+						Blend = Input {
+							Expression = "min(1, max(0, PFXFlashStrobe_Ctl.NumberIn2*(iif(PFXFlashStrobe_Ctl.NumberIn5 == 0, 1 - PFXFlashStrobe_Ctl.NumberIn1, iif(PFXFlashStrobe_Ctl.NumberIn5 == 1, PFXFlashStrobe_Ctl.NumberIn1, iif(PFXFlashStrobe_Ctl.NumberIn5 == 2, 4*PFXFlashStrobe_Ctl.NumberIn1*(1 - PFXFlashStrobe_Ctl.NumberIn1), 1))))*iif(PFXFlashStrobe_Ctl.NumberIn3 < 1, 1, iif(floor(time/max(1, PFXFlashStrobe_Ctl.NumberIn3)) % 2 == 0, 1, 0))))",
+						},
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo {
+						Pos = { 330, 0 },
+					},
+				},
+			},
+		},
+	},
+	ActiveTool = "PFXFlashStrobe",
+}
