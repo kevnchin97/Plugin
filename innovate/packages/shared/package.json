@@ -1,0 +1,28 @@
+{
+  "name": "@innovate/shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./tokens.css": "./tokens.css",
+    "./storage": "./src/server/storage.ts"
+  },
+  "scripts": {
+    "tokens": "tsx scripts/build-tokens.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "4.6.7",
+    "@aws-sdk/client-s3": "3.1173.0",
+    "@aws-sdk/lib-storage": "3.1173.0",
+    "@aws-sdk/s3-request-presigner": "3.1173.0"
+  },
+  "devDependencies": {
+    "tsx": "4.23.15",
+    "vitest": "5.1.1",
+    "@types/node": "22.20.5"
+  }
+}

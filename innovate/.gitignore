@@ -1,0 +1,15 @@
+node_modules/
+.next/
+dist/
+.turbo/
+coverage/
+*.tsbuildinfo
+.env
+.env.local
+fixtures/*.mp4
+fixtures/*.mov
+fixtures/*.webm
+.data/
+apps/web/test-results/
+apps/web/playwright-report/
+apps/web/next-env.d.ts
