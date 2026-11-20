@@ -1,5 +1,6 @@
 /**
  * Design tokens: the one place colors, spacing, type and radii are defined (SPEC §2).
+ * Decision (after M1): the app defaults to the warm light theme; dark is the alternative.
  * `pnpm tokens` renders them to tokens.css as CSS variables + a Tailwind v4 @theme block;
  * a unit test fails if tokens.css is stale. Canvas code reads the same CSS variables.
  */
@@ -27,27 +28,28 @@ export const colors = {
     scrim: "rgba(0, 0, 0, 0.72)",
     playhead: "#ffffff",
   },
+  /** Default: warm paper. The player and filmstrip stay near-black so footage colour reads true. */
   light: {
-    bg: "#f3f3f1",
-    surface: "#ffffff",
-    "surface-2": "#f8f8f6",
-    "surface-3": "#ededea",
-    "surface-4": "#e2e2de",
-    border: "#e0e0db",
-    "border-strong": "#c9c9c3",
-    text: "#141416",
-    "text-muted": "#5b5b64",
-    "text-faint": "#8b8b93",
-    accent: "#b46500",
-    "accent-strong": "#9a5600",
+    bg: "#f2ede3",
+    surface: "#fbf8f2",
+    "surface-2": "#f7f3ea",
+    "surface-3": "#ebe4d6",
+    "surface-4": "#e0d8c8",
+    border: "#e3dccf",
+    "border-strong": "#cfc6b5",
+    text: "#211d18",
+    "text-muted": "#5f574c",
+    "text-faint": "#6b6357",
+    accent: "#a4481a",
+    "accent-strong": "#8c3c13",
     "accent-fg": "#ffffff",
-    "accent-soft": "rgba(180, 101, 0, 0.12)",
-    "accent-line": "rgba(180, 101, 0, 0.55)",
-    danger: "#c93434",
-    success: "#1f8a5a",
-    player: "#0a0a0b",
-    scrim: "rgba(10, 10, 11, 0.6)",
-    playhead: "#141416",
+    "accent-soft": "rgba(164, 72, 26, 0.10)",
+    "accent-line": "rgba(164, 72, 26, 0.5)",
+    danger: "#b3261e",
+    success: "#2e7a4f",
+    player: "#0d0c0b",
+    scrim: "rgba(33, 29, 24, 0.45)",
+    playhead: "#211d18",
   },
 } as const;
 
@@ -87,8 +89,8 @@ export function renderTokensCss(): string {
     for (const [name, value] of Object.entries(colors[scheme])) lines.push(`  --in-${name}: ${value};`);
     lines.push("}");
   };
-  block(':root,\n[data-theme="dark"]', "dark");
-  block('[data-theme="light"]', "light");
+  block(':root,\n[data-theme="light"]', "light");
+  block('[data-theme="dark"]', "dark");
   lines.push(":root {");
   lines.push(`  --in-ease: ${motion.ease};`);
   lines.push(`  --in-fast: ${motion.fast};`);

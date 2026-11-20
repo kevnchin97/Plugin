@@ -28,7 +28,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           <div
             key={t.id}
             role={t.tone === "error" ? "alert" : "status"}
-            className={`rounded-md border bg-surface-3 px-3 py-1.5 text-sm shadow-[0_8px_30px_rgba(0,0,0,0.5)] ${
+            className={`rounded-md border bg-surface-3 px-3 py-1.5 text-sm shadow-[0_8px_30px_rgba(0,0,0,0.18)] ${
               t.tone === "error" ? "border-danger/50 text-danger" : t.tone === "success" ? "border-success/40 text-text" : "border-border-strong text-text"
             }`}
           >

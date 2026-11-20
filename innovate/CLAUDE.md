@@ -51,6 +51,11 @@ fixtures/        Generated test media (gitignored)
 - **zod on every input**; API errors are `{ error: "readable sentence" }`.
 - **Design tokens** live in `packages/shared/src/tokens.ts`; use Tailwind classes generated from them
   (`bg-surface-2`, `text-text-muted`, `border-border`, `text-accent`, `timecode` utility). No raw hex in components.
+- **Theme (decided after M1, overrides SPEC §2's dark default):** the app defaults to a warm beige
+  light theme; dark is the toggle option. The video player and filmstrip stay near-black in both so
+  footage colour reads true. Boards (M2) take their interaction model from Milanote-style free canvases:
+  cards, columns (= clusters), nested boards, a card toolbar and an Unsorted tray. Borrow patterns,
+  not Milanote's branding or visuals.
 - **Honest gaps:** anything stubbed carries `TODO(M#)`.
 - Env vars: all in `.env.example`; apps read `innovate/.env`. Never commit `.env`.
 - MinIO image: `chainguard/minio` (MinIO stopped publishing community images on Docker Hub).

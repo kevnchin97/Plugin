@@ -11,10 +11,10 @@ export const metadata: Metadata = {
   description: "Collect, cut and present visual references.",
 };
 
-export const viewport: Viewport = { themeColor: "#0a0a0b", colorScheme: "dark light" };
+export const viewport: Viewport = { themeColor: "#f2ede3", colorScheme: "dark light" };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const theme = (await cookies()).get("innovate-theme")?.value === "light" ? "light" : "dark";
+  const theme = (await cookies()).get("innovate-theme")?.value === "dark" ? "dark" : "light";
   return (
     <html lang="en" data-theme={theme} className={`${inter.variable} ${mono.variable}`}>
       <body>{children}</body>

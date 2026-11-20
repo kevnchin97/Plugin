@@ -29,7 +29,7 @@ export function ShortcutsProvider({ children }: { children: React.ReactNode }) {
           <Dialog.Overlay className="fixed inset-0 z-40 bg-scrim backdrop-blur-[2px]" />
           <Dialog.Content
             aria-describedby={undefined}
-            className="fixed top-1/2 left-1/2 z-50 max-h-[85vh] focus:outline-none w-[min(760px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 overflow-auto rounded-lg border border-border-strong bg-surface-2 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.6)]"
+            className="fixed top-1/2 left-1/2 z-50 max-h-[85vh] focus:outline-none w-[min(760px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 overflow-auto rounded-lg border border-border-strong bg-surface-2 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.28)]"
           >
             <div className="mb-5 flex items-baseline justify-between">
               <Dialog.Title className="text-lg font-semibold">Keyboard shortcuts</Dialog.Title>

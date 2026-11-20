@@ -307,7 +307,7 @@ export const Timeline = forwardRef<TimelineHandle, Props>(function Timeline(prop
           {/* Playhead. */}
           <div className="pointer-events-none absolute top-0" style={{ left: headX, height: HEIGHT - PAD_B + 4 }} data-testid="playhead">
             <div className="absolute -left-[5px] top-[4px] h-0 w-0 border-x-[5px] border-t-[7px] border-x-transparent border-t-playhead" />
-            <div className="absolute -left-px top-[4px] bottom-0 w-[2px] bg-playhead shadow-[0_0_0_1px_rgba(0,0,0,0.35)]" />
+            <div className="absolute -left-px top-[4px] bottom-0 w-[2px] bg-playhead shadow-[0_0_0_1px_var(--in-surface)]" />
           </div>
         </div>
       </div>

@@ -14,7 +14,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     "use server";
     await signOut({ redirectTo: "/login" });
   }
-  const theme = (await cookies()).get("innovate-theme")?.value === "light" ? "light" : "dark";
+  const theme = (await cookies()).get("innovate-theme")?.value === "dark" ? "dark" : "light";
   const initial = (ctx.user.name || ctx.user.email || "?").slice(0, 1).toUpperCase();
   return (
     <ToastProvider>

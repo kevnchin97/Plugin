@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 
-/** Dark is the default; light is a secondary option (SPEC §2). Stored in a cookie so SSR renders it. */
+/** Warm light is the default; dark is the alternative. Stored in a cookie so SSR renders it. */
 export function ThemeToggle({ initial }: { initial: "dark" | "light" }) {
   const [theme, setTheme] = useState(initial);
   const toggle = () => {
