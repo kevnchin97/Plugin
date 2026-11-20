@@ -8,6 +8,7 @@ export const jobStages = [
   "queued",
   "fetching",
   "probing",
+  "master",
   "proxy",
   "filmstrip",
   "scenes",
@@ -62,6 +63,7 @@ export interface FilmstripInfo {
 /** Object storage layout. Keys are deterministic so reruns overwrite instead of duplicating. */
 export const storageKeys = {
   original: (ws: string, ref: string, ext: string) => `ws/${ws}/ref/${ref}/original.${ext}`,
+  master: (ws: string, ref: string) => `ws/${ws}/ref/${ref}/master.mp4`,
   proxy: (ws: string, ref: string) => `ws/${ws}/ref/${ref}/proxy.mp4`,
   filmstrip: (ws: string, ref: string) => `ws/${ws}/ref/${ref}/filmstrip.jpg`,
   thumbnail: (ws: string, ref: string) => `ws/${ws}/ref/${ref}/thumb.jpg`,

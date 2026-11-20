@@ -3,4 +3,5 @@ export * from "./probe";
 export * from "./scenes";
 export * from "./derivatives";
 export * from "./exports";
+export * from "./master";
 export * from "./fixtures";

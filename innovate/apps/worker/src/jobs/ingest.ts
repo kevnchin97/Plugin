@@ -2,7 +2,8 @@ import { mkdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 import type { Job } from "bullmq";
 import { and, eq, mediaJobs, references, scenes } from "@innovate/db";
-import { createFilmstrip, createProxy, createThumbnail, detectScenes, planFilmstrip, probe, sampleGifDensity } from "@innovate/media";
+import { analyzeSource, chooseMasterRate, createMaster, createThumbnail, needsMaster, planFilmstrip, probe, sampleGifDensity } from "@innovate/media";
+import { copyFile } from "node:fs/promises";
 import { type IngestJobData, storageKeys } from "@innovate/shared";
 import { db, dirs, storage } from "../context";
 import { env } from "../env";
@@ -67,8 +68,25 @@ export async function runIngest(job: Job<IngestJobData>) {
 
     // 2. Probe.
     await progress.setStage("probing", 0.1);
-    const original = await localOriginal(referenceId, originalKey);
-    const info = await probe(original);
+    let original = await localOriginal(referenceId, originalKey);
+    let info = await probe(original);
+
+    // 2b. Variable frame rate (phones): re-time onto a fixed grid once; everything after uses it.
+    let masterKey: string | null = null;
+    if (needsMaster(info)) {
+      await progress.setStage("master", 0.12);
+      const rate = chooseMasterRate(info);
+      const master = join(work, "master.mp4");
+      await createMaster(original, master, rate, { hasAudio: info.hasAudio, durationSec: info.durationSec, onProgress: progress.span(0.12, 0.3) });
+      masterKey = storageKeys.master(workspaceId, referenceId);
+      await storage.uploadFile(masterKey, master, "video/mp4");
+      // Seed the worker cache so exports don't download it again.
+      const cached = join(dirs.cache, referenceId, "master.mp4");
+      await mkdir(join(dirs.cache, referenceId), { recursive: true });
+      await copyFile(master, cached);
+      original = cached;
+      info = await probe(original);
+    }
     await db
       .update(references)
       .set({
@@ -80,32 +98,41 @@ export async function runIngest(job: Job<IngestJobData>) {
         frameCount: info.frameCount,
         hasAudio: info.hasAudio,
         videoStartOffset: info.videoStartOffset,
+        masterKey,
+        variableFrameRate: masterKey !== null,
       })
       .where(eq(references.id, referenceId));
 
-    // 3. Proxy (low-res H.264 with a short GOP for scrubbing).
-    await progress.setStage("proxy", 0.15);
+    // 3. One decode (in parallel chunks) -> proxy, filmstrip sprite and scene statistics.
+    await progress.setStage("proxy", 0.3);
     const proxy = join(work, "proxy.mp4");
-    await createProxy(original, proxy, { hasAudio: info.hasAudio, durationSec: info.durationSec, onProgress: progress.span(0.15, 0.55) });
-    const proxyKey = storageKeys.proxy(workspaceId, referenceId);
-    await storage.uploadFile(proxyKey, proxy, "video/mp4");
-    await db.update(references).set({ proxyKey }).where(eq(references.id, referenceId));
-
-    // 4. Filmstrip sprite sheet.
-    await progress.setStage("filmstrip", 0.55);
-    const plan = planFilmstrip(info.durationSec, info.width, info.height);
     const strip = join(work, "filmstrip.jpg");
-    await createFilmstrip(proxy, strip, plan, { durationSec: info.durationSec, onProgress: progress.span(0.55, 0.65) });
+    const plan = planFilmstrip(info.durationSec, info.width, info.height);
+    const { scenes: detected, stats } = await analyzeSource(
+      original,
+      { proxy, filmstrip: strip },
+      {
+        hasAudio: info.hasAudio,
+        durationSec: info.durationSec,
+        fps: info.fps,
+        frameCount: info.frameCount,
+        videoStartOffset: info.videoStartOffset,
+        plan,
+        segments: env.INGEST_PARALLELISM,
+        workDir: join(work, "chunks"),
+        onProgress: progress.span(0.3, 0.8),
+      },
+    );
+    const proxyKey = storageKeys.proxy(workspaceId, referenceId);
     const filmstripKey = storageKeys.filmstrip(workspaceId, referenceId);
-    await storage.uploadFile(filmstripKey, strip, "image/jpeg");
-    await db.update(references).set({ filmstrip: { ...plan, key: filmstripKey } }).where(eq(references.id, referenceId));
+    await Promise.all([storage.uploadFile(proxyKey, proxy, "video/mp4"), storage.uploadFile(filmstripKey, strip, "image/jpeg")]);
+    await db
+      .update(references)
+      .set({ proxyKey, filmstrip: { ...plan, key: filmstripKey } })
+      .where(eq(references.id, referenceId));
 
-    // 5. Scenes, scored, with a thumbnail each.
-    await progress.setStage("scenes", 0.65);
-    const { scenes: detected, stats } = await detectScenes(proxy, info.fps, {
-      durationSec: info.durationSec,
-      onProgress: progress.span(0.65, 0.86),
-    });
+    // 4. A thumbnail per scene.
+    await progress.setStage("scenes", 0.82);
     const rows = detected.map((s) => ({
       ...s,
       thumbnailKey: storageKeys.scene(workspaceId, referenceId, s.index),
@@ -117,17 +144,17 @@ export async function runIngest(job: Job<IngestJobData>) {
       // A third of the way in: past any fade-in, before the cut out.
       await createThumbnail(proxy, out, s.start + (s.end - s.start) / 3, 480);
       await storage.uploadFile(s.thumbnailKey, out, "image/jpeg");
-      progress.span(0.88, 0.92)(++done / rows.length);
+      progress.span(0.82, 0.88)(++done / rows.length);
     });
 
-    // 6. GIF size calibration: encode a 1 s sample per scene from the original. Capped so
+    // 5. GIF size calibration: encode a 1 s sample per scene from the original. Capped so
     //    long, cut-heavy videos stay fast; unsampled scenes borrow the median.
     const src = { fps: info.fps, width: info.width, height: info.height, hasAudio: false, videoStartOffset: info.videoStartOffset };
     const toSample = [...rows].sort((a, b) => a.rank - b.rank).slice(0, MAX_DENSITY_SAMPLES);
     done = 0;
     await mapLimit(toSample, 4, async (s) => {
       s.gifDensity = await sampleGifDensity(original, work, s, src).catch(() => null);
-      progress.span(0.92, 0.98)(++done / toSample.length);
+      progress.span(0.88, 0.98)(++done / toSample.length);
     });
     const sampled = rows.map((r) => r.gifDensity).filter((d) => d !== null).sort((a, b) => a.perFrame - b.perFrame);
     const median = sampled.length ? sampled[Math.floor(sampled.length / 2)]! : null;

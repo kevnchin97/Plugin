@@ -8,7 +8,10 @@ export interface ProbeResult {
   width: number;
   height: number;
   fps: FrameRate;
-  /** True when avg and nominal rates disagree (phone footage). Frame math assumes CFR. */
+  /** Container's nominal rate (r_frame_rate) and the measured average rate. */
+  nominalFps: FrameRate;
+  avgFps: FrameRate;
+  /** True when avg and nominal rates disagree (phone footage). Ingest makes a CFR master. */
   variableFrameRate: boolean;
   frameCount: number;
   hasAudio: boolean;
@@ -69,6 +72,8 @@ export async function probe(file: string, signal?: AbortSignal): Promise<ProbeRe
     width,
     height,
     fps,
+    nominalFps: nominal,
+    avgFps: avg,
     variableFrameRate,
     frameCount,
     hasAudio: Boolean(audio),

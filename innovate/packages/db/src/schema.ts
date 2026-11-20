@@ -115,6 +115,9 @@ export const references = pgTable(
 
     // Media
     originalKey: text("original_key"),
+    /** CFR re-time of a variable-frame-rate original; proxy, scenes and exports use it when set. */
+    masterKey: text("master_key"),
+    variableFrameRate: boolean("variable_frame_rate").notNull().default(false),
     proxyKey: text("proxy_key"),
     thumbnailKey: text("thumbnail_key"),
     filmstrip: jsonb("filmstrip").$type<FilmstripInfo>(),

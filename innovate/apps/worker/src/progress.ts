@@ -48,5 +48,5 @@ export class Progress {
 }
 
 function isIngestStage(stage: JobStage) {
-  return ["fetching", "probing", "proxy", "filmstrip", "scenes"].includes(stage);
+  return ["fetching", "probing", "master", "proxy", "filmstrip", "scenes"].includes(stage);
 }

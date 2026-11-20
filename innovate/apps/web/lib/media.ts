@@ -42,6 +42,7 @@ export async function serializeReference(ref: Reference) {
     fps: ref.fpsNum && ref.fpsDen ? { num: ref.fpsNum, den: ref.fpsDen } : null,
     frameCount: ref.frameCount,
     hasAudio: Boolean(ref.hasAudio),
+    variableFrameRate: ref.variableFrameRate,
     sourceUrl: ref.sourceUrl,
     sourcePlatform: ref.sourcePlatform,
     sourceIn: ref.sourceIn,

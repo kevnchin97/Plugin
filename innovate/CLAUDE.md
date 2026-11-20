@@ -29,7 +29,8 @@ apps/web         Next.js 16 App Router (UI + API routes). Auth.js v5 in auth.ts.
   components/editor/  Editor, usePlayer (frame clock), Timeline (canvas filmstrip), SceneList, Inspector
   lib/shortcuts.ts    the ONE shortcut table: keymap + ? overlay both read it
   e2e/             Playwright specs (milestone "done when" criteria)
-apps/worker      BullMQ worker: jobs/ingest.ts (probe, proxy, filmstrip, scenes, GIF density), jobs/export.ts
+apps/worker      BullMQ worker: jobs/ingest.ts (probe, CFR master if VFR, one-decode analysis, thumbnails,
+                 GIF density), jobs/export.ts
 packages/db      Drizzle schema, migrations (drizzle/), seed. Table for references is `refs` (reserved word).
 packages/media   Pure ffmpeg wrappers: probe, proxy, filmstrip, scene detection, still/GIF/clip, fixtures
 packages/shared  Types, zod schemas, timecode math, job contract, GIF params/estimate, design tokens,
@@ -46,7 +47,13 @@ fixtures/        Generated test media (gitignored)
 - **Frames, not seconds.** The editor addresses integer frames on the source's rational fps grid
   (`FrameRate {num, den}`). Ranges are inclusive `[inFrame, outFrame]`; scenes are `[startFrame, endFrame)`.
   Timecodes are non-drop-frame `HH:MM:SS:FF`. Exports seek a quarter frame early, zero PTS, take N frames.
-- **Exports render from the original**, never the proxy. The proxy keeps every frame (`-fps_mode passthrough`).
+- **Exports render from the original** (or its CFR master), never the proxy. The proxy keeps every frame.
+- **Variable-frame-rate sources** (phones) get a near-lossless CFR master at ingest (`packages/media/src/master.ts`,
+  rate from `chooseMasterRate`); proxy, scenes and exports all use it. The untouched original is kept.
+- **Ingest analysis decodes once**, in `INGEST_PARALLELISM` frame-exact chunks run in parallel
+  (`analyzeSource` in `derivatives.ts`): each chunk emits proxy video, filmstrip tiles and scene stats; chunks
+  overlap by one frame for scene scores, the video concatenates without re-encoding, audio is encoded once.
+  Chunks need an input `-t`: `trim` alone doesn't stop the decoder.
 - **Workspace scoping.** Every query filters by the session's `workspaceId` (`requireApiSession`).
 - **zod on every input**; API errors are `{ error: "readable sentence" }`.
 - **Design tokens** live in `packages/shared/src/tokens.ts`; use Tailwind classes generated from them

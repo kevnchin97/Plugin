@@ -30,7 +30,9 @@ export async function runExport(job: Job<ExportJobData>): Promise<ExportOutput> 
     .select()
     .from(references)
     .where(and(eq(references.id, referenceId), eq(references.workspaceId, workspaceId)));
-  if (!ref || !ref.originalKey) throw new Error("The source video is missing.");
+  // VFR sources render from their CFR master so frame N matches what the editor showed.
+  const sourceKey = ref?.masterKey ?? ref?.originalKey;
+  if (!ref || !sourceKey) throw new Error("The source video is missing.");
   if (ref.status !== "ready" || !ref.fpsNum || !ref.fpsDen || !ref.width || !ref.height)
     throw new Error("The source video hasn't finished processing.");
 
@@ -45,7 +47,7 @@ export async function runExport(job: Job<ExportJobData>): Promise<ExportOutput> 
   const lastFrame = Math.max(0, (ref.frameCount ?? 1) - 1);
   const progress = new Progress(job, jobId);
   await progress.setStage("downloading", 0);
-  const original = await localOriginal(referenceId, ref.originalKey);
+  const original = await localOriginal(referenceId, sourceKey);
 
   const work = join(dirs.work, `export-${jobId}-${job.attemptsMade}`);
   await mkdir(work, { recursive: true });

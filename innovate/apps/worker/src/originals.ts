@@ -11,8 +11,7 @@ const CACHE_MAX_BYTES = 20 * 1024 ** 3;
 
 export async function localOriginal(referenceId: string, key: string): Promise<string> {
   const dir = join(dirs.cache, referenceId);
-  const ext = key.split(".").pop() ?? "bin";
-  const file = join(dir, `original.${ext}`);
+  const file = join(dir, key.split("/").pop() ?? "original");
   if (existsSync(file)) {
     const now = new Date();
     await utimes(file, now, now).catch(() => {});

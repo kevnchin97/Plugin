@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/Button";
 
 const STEPS: { stage: string[]; label: string }[] = [
   { stage: ["uploading", "fetching"], label: "Fetching the video" },
-  { stage: ["probing", "proxy"], label: "Creating a scrubbing proxy" },
-  { stage: ["filmstrip"], label: "Building the filmstrip" },
-  { stage: ["scenes"], label: "Detecting scenes" },
+  { stage: ["probing", "master"], label: "Reading the video" },
+  { stage: ["proxy", "filmstrip"], label: "Creating a proxy and detecting scenes" },
+  { stage: ["scenes"], label: "Preparing scene thumbnails" },
 ];
 
 export function IngestView({ reference, onRetry }: { reference: ReferenceDTO; onRetry(): void }) {

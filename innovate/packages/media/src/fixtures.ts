@@ -43,6 +43,12 @@ export const FRAMES_FIXTURE = { file: "frames.mp4", fps: 25, frames: 250, width:
 export const FRAMES_2997_FIXTURE = { file: "frames2997.mov", fpsNum: 30000, fpsDen: 1001, frames: 300, width: 320, height: 180 };
 export const lumaForFrame = (n: number) => 16 + 4 * (n % 55);
 
+/**
+ * vfr.mp4: phone-style variable frame rate. Nominal 30 fps, but every 7th frame is missing
+ * (as if dropped under load). Frame n of the 30 fps capture keeps its luma 16 + 4*(n mod 55).
+ */
+export const VFR_FIXTURE = { file: "vfr.mp4", nominalFps: 30, captureFrames: 150, droppedEvery: 7, droppedPhase: 3 };
+
 /** demo.mp4: a ~16 s "film" of generated shots with grain and a chord pad, for the seed and screenshots. */
 export const DEMO_FIXTURE = { file: "demo.mp4" };
 
@@ -117,6 +123,35 @@ async function makeFrames(out: string, rate: string, frames: number, extra: stri
     "-b:a",
     "96k",
     ...extra,
+    out,
+  ]);
+}
+
+async function makeVfr(out: string) {
+  const f = VFR_FIXTURE;
+  await runFfmpeg([
+    "-f",
+    "lavfi",
+    "-i",
+    `color=c=black:s=320x180:r=${f.nominalFps},format=yuv420p,geq=lum='16+4*mod(N\\,55)':cb=128:cr=128,trim=end_frame=${f.captureFrames},select='not(eq(mod(n\\,${f.droppedEvery})\\,${f.droppedPhase}))'`,
+    "-f",
+    "lavfi",
+    "-i",
+    "sine=frequency=330:sample_rate=48000",
+    "-t",
+    String(f.captureFrames / f.nominalFps),
+    "-fps_mode",
+    "vfr",
+    "-c:v",
+    "libx264",
+    "-preset",
+    "veryfast",
+    "-qp",
+    "0",
+    "-c:a",
+    "aac",
+    "-video_track_timescale",
+    "90000",
     out,
   ]);
 }
@@ -196,6 +231,7 @@ export async function ensureFixtures(opts: { force?: boolean; only?: string[]; l
     [SCENES_FIXTURE.file, makeScenes],
     [FRAMES_FIXTURE.file, (o) => makeFrames(o, "25", FRAMES_FIXTURE.frames, [])],
     [FRAMES_2997_FIXTURE.file, (o) => makeFrames(o, "30000/1001", FRAMES_2997_FIXTURE.frames, ["-video_track_timescale", "600"])],
+    [VFR_FIXTURE.file, makeVfr],
     [DEMO_FIXTURE.file, makeDemo],
     [WEBM_FIXTURE.file, makeWebm],
   ];

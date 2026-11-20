@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { expect, type Page, test } from "@playwright/test";
 import { ffprobe, fixture, signIn } from "./helpers";
 
@@ -149,4 +150,19 @@ test("saving the same export twice at once creates one library item", async ({ p
   expect(new Set(results.map((r: { referenceId: string }) => r.referenceId)).size).toBe(1);
   await page.goto("/");
   await expect(page.getByTestId("library-item")).toHaveCount(2);
+});
+
+test("variable-frame-rate (phone) footage is conformed so frames stay exact", async ({ page }, testInfo) => {
+  await signIn(page);
+  await upload(page, "vfr.mp4");
+  await expect(page.getByTestId("scene").first()).toBeVisible({ timeout: 90_000 });
+  await expect(page.getByText("VFR conformed")).toBeVisible();
+  await expect(page.getByText(/· 30 fps ·/)).toBeVisible();
+  await page.keyboard.press("Shift+ArrowRight");
+  await expect(page.getByTestId("current-tc")).toHaveText("00:00:01:00");
+  const still = await download(page, "s", testInfo);
+  // Frame 30 of the 30 fps capture has luma 16 + 4 * 30 = 136.
+  const out = execFileSync("ffmpeg", ["-v", "error", "-i", still.path, "-vf", "signalstats,metadata=mode=print:key=lavfi.signalstats.YAVG:file=-", "-f", "null", "-"]).toString();
+  const luma = Number(/YAVG=([\d.]+)/.exec(out)?.[1]);
+  expect(Math.abs(luma - 136)).toBeLessThan(2);
 });

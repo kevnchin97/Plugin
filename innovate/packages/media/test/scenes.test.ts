@@ -95,3 +95,59 @@ describe("detectScenes on the generated fixture", () => {
     expect(scenes[1]!.rank).toBe(3);
   });
 });
+
+describe("parallel single-decode analysis", () => {
+  for (const segments of [1, 3]) {
+    it(`matches the reference passes with ${segments} chunk(s): cuts, every frame, audio, filmstrip`, async () => {
+      const { analyzeSource, planFilmstrip } = await import("../src/derivatives");
+      const { runFfprobe } = await import("../src/run");
+      const dir = tmp();
+      const src = fixturePath(SCENES_FIXTURE.file);
+      const info = await probe(src);
+      const plan = planFilmstrip(info.durationSec, info.width, info.height);
+      const out = { proxy: join(dir, "p.mp4"), filmstrip: join(dir, "f.jpg") };
+      const { scenes, stats } = await analyzeSource(src, out, {
+        hasAudio: true,
+        durationSec: info.durationSec,
+        fps: info.fps,
+        frameCount: info.frameCount,
+        plan,
+        segments,
+        minSegmentSeconds: 1,
+        workDir: join(dir, "work"),
+      });
+      expect(stats).toHaveLength(SCENES_FIXTURE.frames);
+      expect(stats.map((s) => s.frame)).toEqual([...Array(SCENES_FIXTURE.frames).keys()]);
+      expect(scenes).toHaveLength(4);
+      expect(scenes.slice(1, 3).map((s) => s.startFrame)).toEqual([50, 125]);
+      const p = await probe(out.proxy);
+      expect(p.frameCount).toBe(SCENES_FIXTURE.frames);
+      expect(p.variableFrameRate).toBe(false);
+      expect(p.hasAudio).toBe(true);
+      expect(Math.abs(p.durationSec - info.durationSec)).toBeLessThan(0.1);
+      const strip = JSON.parse(await runFfprobe(["-print_format", "json", "-show_streams", out.filmstrip])) as { streams: { width: number; height: number }[] };
+      expect(strip.streams[0]).toMatchObject({ width: plan.columns * plan.tileWidth, height: plan.rows * plan.tileHeight });
+    });
+  }
+
+  it("keeps frame identity across chunk boundaries, and finds a cut sitting exactly on one", async () => {
+    const { analyzeSource, planFilmstrip, planSegments } = await import("../src/derivatives");
+    const { frameLumas } = await import("./helpers");
+    const { FRAMES_FIXTURE, lumaForFrame } = await import("../src/fixtures");
+    const dir = tmp();
+    const src = fixturePath(FRAMES_FIXTURE.file);
+    const info = await probe(src);
+    // 250 frames in 5 chunks -> boundaries at 50, 100, 150, 200.
+    expect(planSegments(250, info.fps, 5, 1).map((s) => s.start)).toEqual([0, 50, 100, 150, 200]);
+    const out = { proxy: join(dir, "p.mp4"), filmstrip: join(dir, "f.jpg") };
+    const plan = planFilmstrip(info.durationSec, info.width, info.height);
+    const { stats } = await analyzeSource(src, out, {
+      hasAudio: true, durationSec: info.durationSec, fps: info.fps, frameCount: info.frameCount, plan, segments: 5, minSegmentSeconds: 1, workDir: join(dir, "w"),
+    });
+    const lumas = await frameLumas(out.proxy);
+    expect(lumas).toHaveLength(250);
+    for (const f of [0, 49, 50, 51, 99, 100, 150, 199, 200, 249]) expect(Math.abs(lumas[f]! - lumaForFrame(f))).toBeLessThan(2);
+    // Every frame differs from the previous one, including the first frame of each chunk.
+    for (const f of [50, 100, 150, 200]) expect(stats[f]!.scene).toBeGreaterThan(0);
+  });
+});

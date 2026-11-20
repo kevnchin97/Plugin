@@ -327,6 +327,9 @@ export function Editor({ initial }: { initial: ReferenceDTO }) {
           <span className="truncate text-xs text-text-faint tabular">
             {ref.width}×{ref.height} · {(fps.num / fps.den).toFixed(fps.den === 1 ? 0 : 3)} fps · {formatTimecode(frameCount, fps)}
             {ref.hasAudio ? " · audio" : " · no audio"}
+            {ref.variableFrameRate && (
+              <span title="The source had a variable frame rate; it was conformed to a fixed rate so frames line up exactly."> · VFR conformed</span>
+            )}
           </span>
         )}
         <span className="ml-auto hidden items-center gap-1.5 text-xs text-text-faint lg:flex">
