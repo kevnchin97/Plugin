@@ -1,4 +1,4 @@
-# Build prompt: Bloom, a visual research workspace for filmmakers
+# Build prompt: Innovate, a visual research workspace for filmmakers
 
 Copy everything below the line into your app builder or coding agent.
 
@@ -6,9 +6,9 @@ Copy everything below the line into your app builder or coding agent.
 
 ## Role and goal
 
-You are a senior product engineer and designer. Build **Bloom**, a web app where filmmakers and creative teams collect, organize and present visual references in one place.
+You are a senior product engineer and designer. Build **Innovate**, a web app where filmmakers and creative teams collect, organize and present visual references in one place.
 
-Today these people use a folder of screenshots, a few downloader sites and a separate moodboard app. Bloom replaces all three. Every feature should serve one loop: **find a reference, capture the exact moment, organize it, present it, get feedback.**
+Today these people use a folder of screenshots, a few downloader sites and a separate moodboard app. Innovate replaces all three. Every feature should serve one loop: **find a reference, capture the exact moment, organize it, present it, get feedback.**
 
 ## Who it is for
 
@@ -67,13 +67,13 @@ Directors, cinematographers, photographers, visual researchers and treatment des
 
 **Destination**
 - **Download**: one click, with a clean file name such as `source-title_00m12s-00m15s.gif`.
-- **Save to Bloom**: pick a board (or the inbox). The saved item sits next to the reference it came from, and the original video is kept as the parent reference.
+- **Save to Innovate**: pick a board (or the inbox). The saved item sits next to the reference it came from, and the original video is kept as the parent reference.
 - No trip through Premiere: these exports must be ready for decks, treatments and shot lists.
 
 ### 2. Saving references
 
 - Save images, videos, GIFs, links and notes from anywhere on the web.
-- **Chrome extension (Manifest V3)**: a right-click "Save to Bloom" option on images and videos, a toolbar button that saves the current page, and a quick board picker. Include site-aware capture for ShotDeck, Pinterest and Vimeo that grabs the full-resolution asset and its metadata, not the thumbnail.
+- **Chrome extension (Manifest V3)**: a right-click "Save to Innovate" option on images and videos, a toolbar button that saves the current page, and a quick board picker. Include site-aware capture for ShotDeck, Pinterest and Vimeo that grabs the full-resolution asset and its metadata, not the thumbnail.
 - **Text-to-save**: each user gets a phone number (via an SMS or WhatsApp provider such as Twilio). Texting a link, such as an Instagram post, ingests it and drops it into an "Inbox from text" folder automatically, with a confirmation reply.
 - **Uploads**: drag and drop your own footage, stills and pulls, with batch upload and resumable uploads for large files. They live in the same library as web saves.
 - Remove duplicates by matching each item's perceptual hash.
