@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { and, eq, mediaJobs, references } from "@innovate/db";
 import { formatTimecode, saveExportSchema } from "@innovate/shared";
 import { HttpError, notFound, route, uuidParam } from "@/lib/api";
+import { placeOnBoard } from "@/lib/boards";
 import { getReference } from "@/lib/media";
 import { db } from "@/lib/server";
 import { requireApiSession } from "@/lib/session";
@@ -9,7 +10,7 @@ import { requireApiSession } from "@/lib/session";
 /**
  * "Save to Innovate": turn a finished export into a library reference that points back to
  * its source (parentReferenceId) and keeps source URL, platform and timecodes. Idempotent.
- * TODO(M2): board picker; M1 saves to the library inbox.
+ * With `boardId` the item is also placed on that board; without, it waits in Unsorted.
  */
 export const POST = route(async (req: Request, { params }: { params: Promise<{ id: string }> }) => {
   const ctx = await requireApiSession({ write: true });
@@ -65,7 +66,10 @@ export const POST = route(async (req: Request, { params }: { params: Promise<{ i
       })
       .returning({ id: references.id });
     await tx.update(mediaJobs).set({ savedReferenceId: created!.id }).where(eq(mediaJobs.id, job.id));
-    return { referenceId: created!.id, alreadySaved: false };
+    const boardItemId = body.boardId
+      ? await placeOnBoard(tx, ctx.workspaceId, body.boardId, created!.id, ctx.userId, o.width >= o.height ? 280 : 200)
+      : null;
+    return { referenceId: created!.id, alreadySaved: false, boardId: body.boardId ?? null, boardItemId };
   });
   return NextResponse.json(result, { status: result.alreadySaved ? 200 : 201 });
 });

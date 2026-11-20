@@ -57,6 +57,21 @@ export const SHORTCUTS: Shortcut[] = [
   { action: "help", keys: ["?"], label: "Show this list", group: "View" },
 ];
 
+/** Board canvas shortcuts (shown in the ? overlay; handled in components/board/BoardCanvas.tsx). */
+export const BOARD_SHORTCUTS: { keys: string[]; label: string }[] = [
+  { keys: ["N"], label: "New note" },
+  { keys: ["Enter"], label: "Edit note or link, open board" },
+  { keys: ["Delete"], label: "Delete selection" },
+  { keys: ["←", "→", "↑", "↓"], label: "Nudge (Shift: further)" },
+  { keys: ["⌘", "A"], label: "Select all" },
+  { keys: ["⌘", "D"], label: "Duplicate" },
+  { keys: ["⌘", "Z"], label: "Undo" },
+  { keys: ["⇧", "⌘", "Z"], label: "Redo" },
+  { keys: ["Space"], label: "Hold and drag to pan" },
+  { keys: ["=", "-", "0"], label: "Zoom in, out, reset" },
+  { keys: ["Esc"], label: "Clear selection, cancel arrow" },
+];
+
 /** Map a keydown to an action. Letters use `code` so Alt+I works on every layout (macOS turns it into ˆ). */
 export function actionFor(e: KeyboardEvent): ShortcutAction | null {
   if (e.metaKey || e.ctrlKey) return null;

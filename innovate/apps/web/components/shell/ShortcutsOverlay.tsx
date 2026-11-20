@@ -2,12 +2,19 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { createContext, useContext, useEffect, useState } from "react";
 import { Kbd } from "@/components/ui/Kbd";
-import { isTypingTarget, SHORTCUTS } from "@/lib/shortcuts";
+import { BOARD_SHORTCUTS, isTypingTarget, SHORTCUTS } from "@/lib/shortcuts";
 
 const Ctx = createContext<{ open: boolean; setOpen: (v: boolean) => void }>({ open: false, setOpen: () => {} });
 export const useShortcutsOverlay = () => useContext(Ctx);
 
 const GROUPS = ["Playback", "Navigate", "Marks", "Export", "View"] as const;
+const GROUP_LABEL: Record<(typeof GROUPS)[number], string> = {
+  Playback: "GIF Maker · Playback",
+  Navigate: "GIF Maker · Navigate",
+  Marks: "GIF Maker · Marks",
+  Export: "GIF Maker · Export",
+  View: "GIF Maker · View",
+};
 
 export function ShortcutsProvider({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -40,7 +47,7 @@ export function ShortcutsProvider({ children }: { children: React.ReactNode }) {
             <div className="grid gap-x-10 gap-y-6 sm:grid-cols-2">
               {GROUPS.map((group) => (
                 <section key={group}>
-                  <h3 className="mb-2 text-2xs font-medium tracking-[0.12em] text-text-faint uppercase">{group}</h3>
+                  <h3 className="mb-2 text-2xs font-medium tracking-[0.12em] text-text-faint uppercase">{GROUP_LABEL[group]}</h3>
                   <ul className="space-y-1.5">
                     {SHORTCUTS.filter((s) => s.group === group).map((s) => (
                       <li key={s.action} className="flex items-center justify-between gap-4 text-sm" data-shortcut={s.action}>
@@ -55,6 +62,21 @@ export function ShortcutsProvider({ children }: { children: React.ReactNode }) {
                   </ul>
                 </section>
               ))}
+              <section>
+                <h3 className="mb-2 text-2xs font-medium tracking-[0.12em] text-text-faint uppercase">Boards</h3>
+                <ul className="space-y-1.5">
+                  {BOARD_SHORTCUTS.map((s) => (
+                    <li key={s.label} className="flex items-center justify-between gap-4 text-sm">
+                      <span className="text-text-muted">{s.label}</span>
+                      <span className="flex shrink-0 gap-1">
+                        {s.keys.map((k) => (
+                          <Kbd key={k}>{k}</Kbd>
+                        ))}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
             </div>
           </Dialog.Content>
         </Dialog.Portal>

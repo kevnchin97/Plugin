@@ -41,6 +41,9 @@ interface Props {
   onClearIn(): void;
   onClearOut(): void;
   exports: JobDTO[];
+  boards: { id: string; title: string }[];
+  saveTo: string;
+  onSaveTo(id: string): void;
   autoDownload: boolean;
   onAutoDownload(v: boolean): void;
   onSave(job: JobDTO): void;
@@ -245,6 +248,25 @@ export function Inspector(p: Props) {
             Download when ready
           </label>
         </div>
+        <label className="mb-2.5 flex items-center gap-2 text-xs text-text-muted">
+          <span className="shrink-0">
+            Save to <span className="text-text-faint">(Enter)</span>
+          </span>
+          <select
+            value={p.saveTo}
+            onChange={(e) => p.onSaveTo(e.target.value)}
+            className="h-6 min-w-0 flex-1 rounded-sm border border-border-strong bg-surface-2 px-1.5 text-xs text-text"
+            aria-label="Save exports to"
+            data-testid="save-to"
+          >
+            <option value="">Unsorted</option>
+            {p.boards.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.title}
+              </option>
+            ))}
+          </select>
+        </label>
         {p.exports.length === 0 ? (
           <p className="text-xs leading-5 text-text-faint">
             Nothing yet. Press <Kbd>S</Kbd>, <Kbd>G</Kbd> or <Kbd>C</Kbd>, then <Kbd>Enter</Kbd> to keep the latest in your library.
@@ -318,7 +340,7 @@ function ExportRow({ job, onSave, onDownload, onRetry }: { job: JobDTO; onSave(j
                 Download
               </Button>
               <Button size="sm" variant="ghost" disabled={Boolean(job.savedReferenceId)} onClick={() => onSave(job)}>
-                {job.savedReferenceId ? "Saved" : "Save to library"}
+                {job.savedReferenceId ? "Saved" : "Save"}
               </Button>
             </>
           )}

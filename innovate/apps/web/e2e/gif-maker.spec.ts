@@ -85,10 +85,10 @@ test("GIF Maker: upload, scenes, keyboard-only still + GIF + clip with sound", a
   // Enter saves the latest export to the library, linked to its source.
   await expect(page.getByTestId("export-row")).toHaveCount(3);
   await page.keyboard.press("Enter");
-  await expect(page.getByText("Saved scenes_00m05s-00m06s.mp4 to your library")).toBeVisible();
+  await expect(page.getByText("Saved scenes_00m05s-00m06s.mp4 to Unsorted")).toBeVisible();
   await expect(page.locator('[data-testid=export-row][data-kind=clip]')).toContainText("In library");
 
-  await page.goto("/");
+  await page.goto("/library");
   const items = page.getByTestId("library-item");
   await expect(items).toHaveCount(2);
   await expect(page.locator('[data-testid=library-item][data-type=clip]')).toContainText("from scenes");
@@ -148,7 +148,7 @@ test("saving the same export twice at once creates one library item", async ({ p
     return Promise.all([post(), post(), post()]);
   }, id);
   expect(new Set(results.map((r: { referenceId: string }) => r.referenceId)).size).toBe(1);
-  await page.goto("/");
+  await page.goto("/library");
   await expect(page.getByTestId("library-item")).toHaveCount(2);
 });
 

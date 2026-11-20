@@ -22,6 +22,13 @@
       "when": 1795208738915,
       "tag": "0002_ref_cfr_master",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1795216943506,
+      "tag": "0003_boards",
+      "breakpoints": true
     }
   ]
 }

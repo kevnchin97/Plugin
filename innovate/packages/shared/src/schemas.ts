@@ -63,6 +63,18 @@ export const MAX_GIF_SECONDS = 60;
 export const MAX_CLIP_SECONDS = 15 * 60;
 
 export const saveExportSchema = z.object({
-  jobId: z.uuid(),
   title: z.string().max(200).optional(),
+  /** Board to place the saved item on; omitted = Unsorted. */
+  boardId: z.uuid().nullable().optional(),
+});
+
+export const IMAGE_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
+
+export const createImageUploadSchema = z.object({
+  filename: z.string().min(1).max(255),
+  contentType: z.enum(IMAGE_MIME_TYPES),
+  size: z.number().int().positive().max(100 * 1024 ** 2),
+  width: z.number().int().positive().max(20_000),
+  height: z.number().int().positive().max(20_000),
+  boardId: z.uuid().nullable().optional(),
 });

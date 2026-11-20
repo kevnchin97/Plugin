@@ -10,6 +10,13 @@ export const POST = route(async (_req: Request, { params }: { params: Promise<{ 
   const ctx = await requireApiSession({ write: true });
   const ref = await getReference(ctx.workspaceId, uuidParam.parse((await params).id));
   if (!ref.originalKey && !ref.sourceUrl) throw new HttpError(400, "Nothing to process.");
+  if (ref.type === "image" || ref.type === "gif") {
+    // Images are usable as soon as they're stored.
+    const head = await storage().head(ref.originalKey!);
+    if (!head) throw new HttpError(409, "The upload hasn't reached storage. Try again.");
+    await db().update(references).set({ bytes: head.size, stage: "ready", status: "ready" }).where(eq(references.id, ref.id));
+    return NextResponse.json({ ready: true });
+  }
   if (ref.originalKey && !ref.sourceUrl) {
     const head = await storage().head(ref.originalKey);
     if (!head) throw new HttpError(409, "The upload hasn't reached storage. Try again.");

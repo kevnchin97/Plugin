@@ -216,3 +216,76 @@ export type Scene = typeof scenes.$inferSelect;
 export type MediaJob = typeof mediaJobs.$inferSelect;
 
 export const _sql = sql;
+
+/* ---------- Boards (M2) ---------- */
+
+export const boardViewEnum = pgEnum("board_view", ["canvas", "grid"]);
+
+export const boards = pgTable(
+  "boards",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+    /** Boards nest: a board card on a parent board opens this one. */
+    parentBoardId: uuid("parent_board_id"),
+    title: text("title").notNull().default("Untitled board"),
+    view: boardViewEnum("view").notNull().default("canvas"),
+    createdBy: text("created_by").references(() => users.id, { onDelete: "set null" }),
+    ...timestamps,
+  },
+  (t) => [index("boards_workspace_idx").on(t.workspaceId, t.updatedAt), index("boards_parent_idx").on(t.parentBoardId)],
+);
+
+export const boardVisits = pgTable(
+  "board_visits",
+  {
+    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    boardId: uuid("board_id").notNull().references(() => boards.id, { onDelete: "cascade" }),
+    visitedAt: timestamp("visited_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.boardId] })],
+);
+
+/**
+ * Everything on a board. Columns are the spec's clusters: items with `columnId` stack inside
+ * that column (ordered by `position`) and ignore x/y. Loose items sit at x/y on the canvas.
+ */
+export const boardItemKindEnum = pgEnum("board_item_kind", ["reference", "note", "link", "column", "board", "arrow"]);
+
+export interface BoardItemContent {
+  text?: string;
+  url?: string;
+  title?: string;
+  host?: string;
+  from?: string;
+  to?: string;
+}
+
+export const boardItems = pgTable(
+  "board_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+    boardId: uuid("board_id").notNull().references(() => boards.id, { onDelete: "cascade" }),
+    kind: boardItemKindEnum("kind").notNull(),
+    referenceId: uuid("reference_id").references(() => references.id, { onDelete: "cascade" }),
+    childBoardId: uuid("child_board_id").references(() => boards.id, { onDelete: "cascade" }),
+    columnId: uuid("column_id"),
+    x: real("x").notNull().default(0),
+    y: real("y").notNull().default(0),
+    w: real("w").notNull().default(240),
+    z: integer("z").notNull().default(0),
+    position: real("position").notNull().default(0),
+    content: jsonb("content").$type<BoardItemContent>().notNull().default({}),
+    createdBy: text("created_by").references(() => users.id, { onDelete: "set null" }),
+    ...timestamps,
+  },
+  (t) => [
+    index("board_items_board_idx").on(t.boardId),
+    index("board_items_ref_idx").on(t.referenceId),
+    index("board_items_column_idx").on(t.columnId),
+  ],
+);
+
+export type Board = typeof boards.$inferSelect;
+export type BoardItem = typeof boardItems.$inferSelect;

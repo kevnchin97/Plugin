@@ -1,112 +1,180 @@
 "use client";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import Link from "next/link";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import type { ReferenceDTO } from "@/lib/media";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { ReferenceBody, aspectOf } from "@/components/board/cards";
+import { useToast } from "@/components/ui/Toasts";
+import type { RefLite } from "@/lib/boards";
 
-const TYPE_LABEL: Record<string, string> = { video: "Video", gif: "GIF", clip: "Clip", still: "Still" };
+const GAP = 12;
+const MIN_COL = 240;
+const CAPTION = 46;
 
-const REDUCED = "(prefers-reduced-motion: reduce)";
-function useReducedMotion() {
-  return useSyncExternalStore(
-    (on) => {
-      const mq = window.matchMedia(REDUCED);
-      mq.addEventListener("change", on);
-      return () => mq.removeEventListener("change", on);
-    },
-    () => window.matchMedia(REDUCED).matches,
-    () => true,
-  );
-}
+/**
+ * Virtualized masonry (TanStack Virtual lanes): only the cards near the viewport are in the DOM,
+ * so 5,000+ references stay interactive. Every card keeps its native aspect ratio.
+ */
+export function LibraryGrid({ initial, next: firstNext, boards }: { initial: RefLite[]; next: string | null; boards: { id: string; title: string }[] }) {
+  const toast = useToast();
+  const router = useRouter();
+  const [items, setItems] = useState(initial);
+  const [next, setNext] = useState(firstNext);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [hover, setHover] = useState<string | null>(null);
+  const [width, setWidth] = useState(0);
+  const scroller = useRef<HTMLDivElement>(null);
+  const anchor = useRef<number | null>(null);
 
-/** Native aspect ratio, never cropped. Motion plays muted on hover only (and never with reduced motion). */
-function Media({ item, hovering }: { item: ReferenceDTO; hovering: boolean }) {
-  const reduced = useReducedMotion();
-  const video = useRef<HTMLVideoElement>(null);
-  const canvas = useRef<HTMLCanvasElement>(null);
-  const [poster, setPoster] = useState(false);
-  const animate = hovering && !reduced;
+  useLayoutEffect(() => {
+    const el = scroller.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setWidth(Math.min(1600, el.clientWidth) - 48));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
+  // Pull the rest of the library in the background, 1,000 at a time.
   useEffect(() => {
-    const v = video.current;
-    if (!v) return;
-    if (animate) v.play().catch(() => {});
-    else v.pause();
-  }, [animate]);
+    if (!next) return;
+    let cancelled = false;
+    void (async () => {
+      const res = await fetch(`/api/references?limit=1000&before=${encodeURIComponent(next)}`);
+      if (!res.ok || cancelled) return;
+      const page = (await res.json()) as { references: RefLite[]; next: string | null };
+      setItems((cur) => [...cur, ...page.references]);
+      setNext(page.next);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [next]);
 
-  if (item.type === "clip" && item.mediaUrl)
-    return <video ref={video} src={item.mediaUrl} muted loop playsInline preload="metadata" className="block h-full w-full object-contain" />;
-  if (item.type === "gif" && item.mediaUrl) {
-    // A canvas holds the first frame as a still poster; the animated <img> only mounts on hover.
-    return (
-      <>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={item.mediaUrl}
-          alt=""
-          className={`block h-full w-full object-contain ${animate || !poster ? "" : "hidden"}`}
-          onLoad={(e) => {
-            const c = canvas.current;
-            const img = e.currentTarget;
-            if (!c || poster) return;
-            c.width = img.naturalWidth;
-            c.height = img.naturalHeight;
-            c.getContext("2d")?.drawImage(img, 0, 0);
-            setPoster(true);
-          }}
-        />
-        <canvas ref={canvas} className={`block h-full w-full object-contain ${animate || !poster ? "hidden" : ""}`} />
-      </>
-    );
-  }
-  const src = item.type === "still" ? item.mediaUrl : item.thumbnailUrl;
-  // eslint-disable-next-line @next/next/no-img-element
-  return src ? <img src={src} alt="" loading="lazy" className="block h-full w-full object-contain" /> : <div className="h-full w-full" />;
-}
+  const lanes = Math.max(1, Math.floor((width + GAP) / (MIN_COL + GAP)));
+  const colW = lanes ? (width - GAP * (lanes - 1)) / lanes : MIN_COL;
+  const byId = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
 
-function Card({ item, parent }: { item: ReferenceDTO; parent?: ReferenceDTO }) {
-  const [hovering, setHovering] = useState(false);
-  const aspect = item.width && item.height ? item.width / item.height : 16 / 9;
-  const href = item.type === "video" ? `/make/${item.id}` : (item.mediaUrl ?? "#");
-  return (
-    <li className="mb-3 break-inside-avoid" data-testid="library-item" data-type={item.type}>
-      <Link
-        href={href}
-        target={item.type === "video" ? undefined : "_blank"}
-        onMouseEnter={() => setHovering(true)}
-        onMouseLeave={() => setHovering(false)}
-        onFocus={() => setHovering(true)}
-        onBlur={() => setHovering(false)}
-        className="group block overflow-hidden rounded-md border border-border bg-surface transition-colors hover:border-border-strong"
-      >
-        <div className="relative bg-player" style={{ aspectRatio: aspect }}>
-          <Media item={item} hovering={hovering} />
-          <span className="absolute top-2 left-2 rounded-xs bg-black/65 px-1.5 py-px text-2xs font-medium text-white/85">{TYPE_LABEL[item.type] ?? item.type}</span>
-          {item.status !== "ready" && (
-            <span className="absolute inset-0 grid place-items-center bg-black/60 text-xs text-white/80">
-              {item.status === "failed" ? "Failed" : "Processing…"}
-            </span>
-          )}
-        </div>
-        <div className="px-2.5 py-2">
-          <div className="truncate text-sm">{item.title}</div>
-          {parent && <div className="truncate text-2xs text-text-faint">from {parent.title}</div>}
-        </div>
-      </Link>
-    </li>
+  const virtualizer = useVirtualizer({
+    count: items.length,
+    getScrollElement: () => scroller.current,
+    estimateSize: (i) => colW / aspectOf(items[i]) + CAPTION + GAP,
+    lanes,
+    overscan: 8,
+    gap: 0,
+  });
+  useEffect(() => virtualizer.measure(), [colW, lanes, virtualizer]);
+
+  const select = useCallback(
+    (index: number, e: React.MouseEvent | React.KeyboardEvent) => {
+      const id = items[index]!.id;
+      setSelected((cur) => {
+        if (e.shiftKey && anchor.current !== null) {
+          const [a, b] = [Math.min(anchor.current, index), Math.max(anchor.current, index)];
+          return new Set([...cur, ...items.slice(a, b + 1).map((i) => i.id)]);
+        }
+        anchor.current = index;
+        if (e.metaKey || e.ctrlKey) {
+          const n = new Set(cur);
+          if (n.has(id)) n.delete(id);
+          else n.add(id);
+          return n;
+        }
+        return cur.has(id) && cur.size === 1 ? new Set() : new Set([id]);
+      });
+    },
+    [items],
   );
-}
 
-export function LibraryGrid({ items }: { items: ReferenceDTO[] }) {
-  const byId = new Map(items.map((i) => [i.id, i]));
-  // Extracted items sit right after their source.
-  const sources = items.filter((i) => !i.parentReferenceId || !byId.has(i.parentReferenceId));
-  const ordered = sources.flatMap((s) => [s, ...items.filter((c) => c.parentReferenceId === s.id)]);
-  // TODO(M2): virtualized masonry (TanStack Virtual), boards, clusters and multi-select.
+  const addToBoard = async (boardId: string) => {
+    const refs = [...selected];
+    const create = refs.map((referenceId, n) => ({
+      id: crypto.randomUUID(),
+      kind: "reference",
+      referenceId,
+      x: 40 + (n % 5) * 264,
+      y: 40 + Math.floor(n / 5) * 220,
+      w: 240,
+      z: n + 1,
+    }));
+    const res = await fetch(`/api/boards/${boardId}/ops`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ create }) });
+    if (!res.ok) return toast("Couldn't add them to that board.", "error");
+    toast(`Added ${refs.length} to ${boards.find((b) => b.id === boardId)?.title ?? "board"}`, "success");
+    setSelected(new Set());
+  };
+
   return (
-    <ul className="columns-[260px] gap-3">
-      {ordered.map((item) => (
-        <Card key={item.id} item={item} parent={item.parentReferenceId ? byId.get(item.parentReferenceId) : undefined} />
-      ))}
-    </ul>
+    <div ref={scroller} className="relative min-h-0 flex-1 overflow-y-auto" data-testid="library">
+      {items.length === 0 ? (
+        <div className="mx-6 grid min-h-[360px] place-items-center rounded-lg border border-dashed border-border-strong text-center">
+          <div>
+            <p className="text-md">Start with a video.</p>
+            <p className="mt-1 text-sm text-text-muted">Upload footage, find the moment, and save stills, GIFs and clips here.</p>
+            <Link href="/make" className="mt-4 inline-block text-sm text-accent hover:underline">
+              Open the GIF Maker →
+            </Link>
+          </div>
+        </div>
+      ) : (
+        <div className="relative mx-auto max-w-[1600px] px-6" style={{ height: virtualizer.getTotalSize() + 24 }}>
+          {virtualizer.getVirtualItems().map((v) => {
+            const item = items[v.index]!;
+            const parent = item.parentReferenceId ? byId.get(item.parentReferenceId) : undefined;
+            const isSel = selected.has(item.id);
+            return (
+              <div
+                key={item.id}
+                data-index={v.index}
+                ref={virtualizer.measureElement}
+                className="absolute"
+                style={{ top: v.start, left: 24 + v.lane * (colW + GAP), width: colW, paddingBottom: GAP }}
+              >
+                <div
+                  role="button"
+                  tabIndex={0}
+                  aria-pressed={isSel}
+                  aria-label={item.title}
+                  data-testid="library-item"
+                  data-type={item.type}
+                  onClick={(e) => select(v.index, e)}
+                  onDoubleClick={() => item.type === "video" && router.push(`/make/${item.id}`)}
+                  onKeyDown={(e) => {
+                    if (e.key === " ") {
+                      e.preventDefault();
+                      select(v.index, e);
+                    }
+                    if (e.key === "Enter" && item.type === "video") router.push(`/make/${item.id}`);
+                  }}
+                  onMouseEnter={() => setHover(item.id)}
+                  onMouseLeave={() => setHover(null)}
+                  onFocus={() => setHover(item.id)}
+                  onBlur={() => setHover(null)}
+                  className={`overflow-hidden rounded-md border bg-surface transition-colors ${isSel ? "border-accent outline outline-2 outline-offset-1 outline-accent" : "border-border hover:border-border-strong"}`}
+                >
+                  <ReferenceBody reference={item} parentTitle={parent?.title} hovering={hover === item.id} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {selected.size > 0 && (
+        <div className="sticky bottom-4 z-10 mx-auto flex w-fit items-center gap-2 rounded-lg border border-border-strong bg-surface px-3 py-2 text-sm shadow-[0_12px_30px_rgba(33,29,24,0.16)]" role="toolbar" aria-label="Selection">
+          <span className="text-text-muted" data-testid="selection-count">
+            {selected.size} selected
+          </span>
+          <select aria-label="Add selection to board" className="h-7 rounded-sm border border-border-strong bg-surface-2 px-2 text-sm" value="" onChange={(e) => e.target.value && void addToBoard(e.target.value)}>
+            <option value="">Add to board…</option>
+            {boards.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.title}
+              </option>
+            ))}
+          </select>
+          <button type="button" className="h-7 rounded-sm px-2 text-text-muted hover:bg-surface-3" onClick={() => setSelected(new Set())}>
+            Clear
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

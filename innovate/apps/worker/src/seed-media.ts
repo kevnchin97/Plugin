@@ -8,6 +8,7 @@ import { and, closeDb, eq, mediaJobs, references, users, memberships } from "@in
 import { DEMO_FIXTURE, ensureFixtures, fixturePath } from "@innovate/media";
 import { MEDIA_QUEUE, type MediaJobData, storageKeys } from "@innovate/shared";
 import { db, redisConnection, storage } from "./context";
+import { SEED_BOARDS, seedBoards } from "./seed-boards";
 
 await ensureFixtures({ only: [DEMO_FIXTURE.file], log: console.log });
 const [owner] = await db
@@ -47,6 +48,18 @@ const queue = new Queue<MediaJobData>(MEDIA_QUEUE, { connection: redisConnection
 await queue.remove(job!.id).catch(() => {});
 await queue.add("ingest", { type: "ingest", jobId: job!.id, referenceId: id, workspaceId: owner.workspaceId }, { jobId: job!.id, attempts: 3 });
 await queue.close();
-console.log(`queued ingest for "${title}" (${id}); sign in as demo@innovate.local and open /make/${id}`);
+console.log(`queued ingest for "${title}" (${id}); waiting for the worker…`);
+
+// Boards need the film ingested (a worker must be running: `pnpm dev`).
+const deadline = Date.now() + 180_000;
+for (;;) {
+  const [r] = await db.select({ status: references.status }).from(references).where(eq(references.id, id));
+  if (r?.status === "ready") break;
+  if (r?.status === "failed") throw new Error("Demo film ingest failed; check the worker log.");
+  if (Date.now() > deadline) throw new Error("Timed out waiting for the worker. Is `pnpm dev` (or the worker) running?");
+  await new Promise((res) => setTimeout(res, 1000));
+}
+const seeded = await seedBoards({ workspaceId: owner.workspaceId, userId: owner.userId, filmId: id });
+console.log(`seeded boards: ${SEED_BOARDS.join(", ")} (open /boards/${seeded.winter})`);
 await closeDb();
 process.exit(0);

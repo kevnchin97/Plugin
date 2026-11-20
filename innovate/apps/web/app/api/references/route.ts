@@ -1,24 +1,31 @@
 import { NextResponse } from "next/server";
-import { desc, eq, references } from "@innovate/db";
+import { and, desc, eq, lt, references } from "@innovate/db";
 import { createReferenceSchema, detectPlatform, enabledAdapters, storageKeys } from "@innovate/shared";
 import { HttpError, parseJson, route } from "@/lib/api";
-import { serializeReference, upsertJob } from "@/lib/media";
+import { serializeRefLite } from "@/lib/boards";
+import { upsertJob } from "@/lib/media";
 import { db, storage } from "@/lib/server";
 import { requireApiSession } from "@/lib/session";
 
 const PLATFORM_NAMES: Record<string, string> = { youtube: "YouTube", vimeo: "Vimeo", instagram: "Instagram" };
 const EXT = { "video/mp4": "mp4", "video/quicktime": "mov", "video/webm": "webm" } as const;
 
-export const GET = route(async () => {
+/** Library listing, newest first. Cursor = createdAt of the last item; up to 1000 per page. */
+export const GET = route(async (req: Request) => {
   const ctx = await requireApiSession();
-  // TODO(M2): pagination + TanStack Virtual masonry for 5,000+ items.
+  const url = new URL(req.url);
+  const limit = Math.min(1000, Math.max(1, Number(url.searchParams.get("limit") ?? 500)));
+  const before = url.searchParams.get("before");
   const rows = await db()
     .select()
     .from(references)
-    .where(eq(references.workspaceId, ctx.workspaceId))
+    .where(and(eq(references.workspaceId, ctx.workspaceId), before ? lt(references.createdAt, new Date(before)) : undefined))
     .orderBy(desc(references.createdAt))
-    .limit(300);
-  return NextResponse.json({ references: await Promise.all(rows.map(serializeReference)) });
+    .limit(limit);
+  return NextResponse.json({
+    references: await Promise.all(rows.map(serializeRefLite)),
+    next: rows.length === limit ? rows[rows.length - 1]!.createdAt.toISOString() : null,
+  });
 });
 
 /** Start an upload (returns a signed PUT URL) or a direct-URL ingest. */

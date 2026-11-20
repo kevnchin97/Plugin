@@ -56,7 +56,15 @@ function controlOwnsKey(e: KeyboardEvent): boolean {
   return false;
 }
 
-export function Editor({ initial }: { initial: ReferenceDTO }) {
+export function Editor({
+  initial,
+  initialMarks,
+  boards = [],
+}: {
+  initial: ReferenceDTO;
+  initialMarks?: { inFrame: number | null; outFrame: number | null };
+  boards?: { id: string; title: string }[];
+}) {
   const [ref, setRef] = useState(initial);
   const toast = useToast();
   const overlay = useShortcutsOverlay();
@@ -70,8 +78,9 @@ export function Editor({ initial }: { initial: ReferenceDTO }) {
   });
   const timeline = useRef<TimelineHandle>(null);
 
-  const [inMark, setInMark] = useState<number | null>(null);
-  const [outMark, setOutMark] = useState<number | null>(null);
+  const [inMark, setInMark] = useState<number | null>(initialMarks?.inFrame ?? null);
+  const [outMark, setOutMark] = useState<number | null>(initialMarks?.outFrame ?? null);
+  const [saveTo, setSaveTo] = useState<string>("");
   const [prefs, setPrefs] = useState(() => (typeof window === "undefined" ? { gif: DEFAULT_GIF_OPTIONS, stillFormat: "png" as const, autoDownload: true } : loadPrefs()));
   const [exports, setExports] = useState<JobDTO[]>([]);
   const [muted, setMuted] = useState(false);
@@ -209,17 +218,28 @@ export function Editor({ initial }: { initial: ReferenceDTO }) {
       if (saving.current.has(target.id)) return;
       saving.current.add(target.id);
       try {
-        const { referenceId, alreadySaved } = await postJson<{ referenceId: string; alreadySaved: boolean }>(`/api/jobs/${target.id}/save`);
+        const { referenceId, alreadySaved } = await postJson<{ referenceId: string; alreadySaved: boolean }>(`/api/jobs/${target.id}/save`, {
+          boardId: saveTo || null,
+        });
         setExports((list) => list.map((j) => (j.id === target.id ? { ...j, savedReferenceId: referenceId } : j)));
-        toast(alreadySaved ? "Already in your library" : `Saved ${target.output?.filename ?? "export"} to your library`, "success");
+        const where = saveTo ? (boards.find((b) => b.id === saveTo)?.title ?? "the board") : "Unsorted";
+        toast(alreadySaved ? "Already in your library" : `Saved ${target.output?.filename ?? "export"} to ${where}`, "success");
       } catch (err) {
         toast((err as Error).message, "error");
       } finally {
         saving.current.delete(target.id);
       }
     },
-    [exports, toast],
+    [boards, exports, saveTo, toast],
   );
+
+  // Jump to a deep-linked range (e.g. from a board card's "Source" link).
+  const jumped = useRef(false);
+  useEffect(() => {
+    if (!ready || jumped.current || initialMarks?.inFrame == null) return;
+    jumped.current = true;
+    seek(initialMarks.inFrame);
+  }, [initialMarks, ready, seek]);
 
   const pickScene = useCallback(
     (s: { startFrame: number; endFrame: number }) => {
@@ -425,6 +445,9 @@ export function Editor({ initial }: { initial: ReferenceDTO }) {
             onClearIn={() => setInMark(null)}
             onClearOut={() => setOutMark(null)}
             exports={exports}
+            boards={boards}
+            saveTo={saveTo}
+            onSaveTo={setSaveTo}
             autoDownload={prefs.autoDownload}
             onAutoDownload={(autoDownload) => setPrefs((p) => ({ ...p, autoDownload }))}
             onSave={(j) => void saveExport(j)}

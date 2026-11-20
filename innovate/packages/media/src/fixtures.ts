@@ -49,6 +49,9 @@ export const lumaForFrame = (n: number) => 16 + 4 * (n % 55);
  */
 export const VFR_FIXTURE = { file: "vfr.mp4", nominalFps: 30, captureFrames: 150, droppedEvery: 7, droppedPhase: 3 };
 
+/** portrait.png: a 600x900 still (2:3) for native-aspect checks in grids. */
+export const PORTRAIT_FIXTURE = { file: "portrait.png", width: 600, height: 900 };
+
 /** demo.mp4: a ~16 s "film" of generated shots with grain and a chord pad, for the seed and screenshots. */
 export const DEMO_FIXTURE = { file: "demo.mp4" };
 
@@ -232,6 +235,20 @@ export async function ensureFixtures(opts: { force?: boolean; only?: string[]; l
     [FRAMES_FIXTURE.file, (o) => makeFrames(o, "25", FRAMES_FIXTURE.frames, [])],
     [FRAMES_2997_FIXTURE.file, (o) => makeFrames(o, "30000/1001", FRAMES_2997_FIXTURE.frames, ["-video_track_timescale", "600"])],
     [VFR_FIXTURE.file, makeVfr],
+    [
+      PORTRAIT_FIXTURE.file,
+      async (o) => {
+        await runFfmpeg([
+          "-f",
+          "lavfi",
+          "-i",
+          `gradients=s=${PORTRAIT_FIXTURE.width}x${PORTRAIT_FIXTURE.height}:c0=0x1d2b53:c1=0xf2a641:n=2:d=1`,
+          "-frames:v",
+          "1",
+          o,
+        ]);
+      },
+    ],
     [DEMO_FIXTURE.file, makeDemo],
     [WEBM_FIXTURE.file, makeWebm],
   ];
