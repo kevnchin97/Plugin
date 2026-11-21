@@ -3,6 +3,8 @@ import Link from "next/link";
 import { signOut } from "@/auth";
 import { Suspense } from "react";
 import { HeaderSearch } from "@/components/shell/HeaderSearch";
+import { CommandBar } from "@/components/agents/CommandBar";
+import { agentsEnabled } from "@/lib/agents";
 import { NavLink } from "@/components/shell/NavLink";
 import { ShortcutsButton, ShortcutsProvider } from "@/components/shell/ShortcutsOverlay";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
@@ -38,6 +40,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               <Suspense>
                 <HeaderSearch />
               </Suspense>
+              <CommandBar enabled={agentsEnabled()} />
+              <Link href="/agents" className="rounded-md px-2 py-1 text-sm text-text-muted hover:text-text">
+                Agents
+              </Link>
               <Link href="/portfolio" className="rounded-md px-2 py-1 text-sm text-text-muted hover:text-text">
                 Portfolio
               </Link>

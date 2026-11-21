@@ -73,6 +73,29 @@ export class VimeoAdapter implements IngestAdapter {
     return { title: v.name, platform: "vimeo", durationSec: v.duration, width: v.width, height: v.height, sourceUrl: v.link ?? url.toString() };
   }
 
+  /**
+   * Search public Vimeo videos (official API, GET /videos?query=). Used by the Research Agent:
+   * results are links + metadata only; nothing is downloaded unless the user approves an import.
+   */
+  async search(query: string, limit = 12): Promise<VimeoSearchHit[]> {
+    const params = new URLSearchParams({ query, per_page: String(Math.min(25, Math.max(1, limit))), fields: "uri,name,link,duration,description,pictures.sizes,user.name,width,height" });
+    const res = await fetch(`${this.apiBase}/videos?${params}`, { headers: { authorization: `bearer ${this.token}`, accept: "application/vnd.vimeo.*+json;version=3.4" } });
+    if (res.status === 401 || res.status === 403) throw new AdapterError("Vimeo didn't accept the configured token.");
+    if (res.status === 429) throw new AdapterError("Vimeo is rate-limiting searches; try again in a minute.");
+    if (!res.ok) throw new AdapterError(`Vimeo API error (HTTP ${res.status}).`);
+    const body = (await res.json()) as { data?: VimeoApiVideo[] };
+    return (body.data ?? []).map((v) => ({
+      url: v.link,
+      title: v.name,
+      author: v.user?.name ?? null,
+      durationSec: v.duration ?? null,
+      description: (v.description ?? "").slice(0, 400),
+      thumbnailUrl: [...(v.pictures?.sizes ?? [])].sort((a, b) => b.width - a.width).find((p) => p.width <= 1280)?.link ?? null,
+      width: v.width ?? null,
+      height: v.height ?? null,
+    }));
+  }
+
   /** The best downloadable rendition the account is allowed to fetch (prefers source/original). */
   async fetchMedia(url: URL): Promise<{ stream: ReadableStream<Uint8Array>; contentType: string }> {
     const v = await this.video(url);
@@ -88,6 +111,34 @@ export class VimeoAdapter implements IngestAdapter {
     if (!res.ok || !res.body) throw new AdapterError(`Couldn't download from Vimeo (HTTP ${res.status}).`);
     return { stream: res.body, contentType: best.type.split(";")[0]! };
   }
+}
+
+export interface VimeoSearchHit {
+  url: string;
+  title: string;
+  author: string | null;
+  durationSec: number | null;
+  description: string;
+  thumbnailUrl: string | null;
+  width: number | null;
+  height: number | null;
+}
+interface VimeoApiVideo {
+  link: string;
+  name: string;
+  duration?: number;
+  description?: string | null;
+  width?: number;
+  height?: number;
+  user?: { name?: string };
+  pictures?: { sizes?: { width: number; link: string }[] };
+}
+
+/** Vimeo search for the Research Agent: needs only VIMEO_ACCESS_TOKEN (importing still needs INGEST_VIMEO_ENABLED). */
+export function vimeoSearch(env: NodeJS.ProcessEnv = process.env): VimeoAdapter | null {
+  if (!env.VIMEO_ACCESS_TOKEN) return null;
+  const base = env.VIMEO_API_BASE || "https://api.vimeo.com";
+  return new VimeoAdapter(env.VIMEO_ACCESS_TOKEN, base, base !== "https://api.vimeo.com" && env.NODE_ENV !== "production");
 }
 
 /** Adapters enabled by configuration, in priority order. */

@@ -614,3 +614,58 @@ export type Reel = typeof reels.$inferSelect;
 export type ReelItem = typeof reelItems.$inferSelect;
 export type Portfolio = typeof portfolios.$inferSelect;
 export type PortfolioItem = typeof portfolioItems.$inferSelect;
+
+/* ---------- Agents and text-to-save (M8) ---------- */
+
+/**
+ * One agent run (SPEC §5.8): the prompt, a live step log, the proposal the user reviews, and what
+ * was applied (so it can be undone). Status: queued → running → proposed → applying → applied
+ * (→ undone), or failed / cancelled. The run itself never writes to boards, decks or reels.
+ */
+export const agentTasks = pgTable(
+  "agent_tasks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+    kind: text("kind").$type<"research" | "general">().notNull().default("general"),
+    prompt: text("prompt").notNull(),
+    status: text("status").$type<"queued" | "running" | "proposed" | "applying" | "applied" | "undone" | "failed" | "cancelled">().notNull().default("queued"),
+    cancelRequested: boolean("cancel_requested").notNull().default(false),
+    /** Append-only log shown live: { at, kind: "thinking"|"tool"|"result"|"proposal"|"error"|"done", text, data? }. */
+    steps: jsonb("steps").$type<unknown[]>().notNull().default([]),
+    /** { summary, actions: AgentAction[] } once the agent finishes. */
+    proposal: jsonb("proposal").$type<unknown>(),
+    /** What approval created, for undo (+ exports still rendering). */
+    applied: jsonb("applied").$type<unknown>(),
+    /** References the run itself ingested into the library (allowed without approval; removed on undo). */
+    ingested: jsonb("ingested").$type<string[]>().notNull().default([]),
+    error: text("error"),
+    attempt: integer("attempt").notNull().default(1),
+    ...timestamps,
+  },
+  (t) => [index("agent_tasks_workspace_idx").on(t.workspaceId, t.createdAt)],
+);
+
+/** Phone numbers verified for text-to-save (SMS or WhatsApp via Twilio). E.164, one owner each. */
+export const phoneNumbers = pgTable(
+  "phone_numbers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+    phone: text("phone").notNull(),
+    verifiedAt: timestamp("verified_at", { withTimezone: true }),
+    /** scrypt hash of the 6-digit code, its expiry and failed attempts. */
+    codeHash: text("code_hash"),
+    codeExpiresAt: timestamp("code_expires_at", { withTimezone: true }),
+    attempts: integer("attempts").notNull().default(0),
+    ...timestamps,
+  },
+  (t) => [uniqueIndex("phone_numbers_phone_uq").on(t.phone), index("phone_numbers_user_idx").on(t.userId)],
+);
+
+export type AgentTask = typeof agentTasks.$inferSelect;
+export type PhoneNumber = typeof phoneNumbers.$inferSelect;

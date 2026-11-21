@@ -12,7 +12,8 @@ import { runReelRender } from "./jobs/reel-render";
 import { runIngest } from "./jobs/ingest";
 import { runEmbed, sweepUnembedded } from "./jobs/embed";
 import { embedTexts, warmClip } from "./clip";
-import { EMBED_QUEUE, type EmbedJobData } from "@innovate/shared";
+import { AGENT_QUEUE, type AgentJobData, EMBED_QUEUE, type EmbedJobData } from "@innovate/shared";
+import { runAgent } from "./agent/run";
 import { EMBED_PRIORITY, embedQueue, queueEmbed } from "@innovate/shared/embed-queue";
 
 function readable(err: unknown): string {
@@ -101,9 +102,14 @@ embedWorker.on("ready", () => {
     .catch((err) => console.error(`[worker] CLIP failed to load: ${readable(err)}`));
 });
 
+// Agents: Claude tool loops (network-bound), a few at a time.
+const agentWorker = new Worker<AgentJobData>(AGENT_QUEUE, (job) => runAgent(job), { connection: redisConnection(), concurrency: 4, lockDuration: 10 * 60_000 });
+agentWorker.on("failed", (job, err) => console.error(`[worker] agent ${job?.data.taskId} failed: ${readable(err)}`));
+agentWorker.on("ready", () => console.log(`[worker] listening on "${AGENT_QUEUE}"`));
+
 const shutdown = async () => {
   console.log("[worker] shutting down");
-  await Promise.all([worker.close(), embedWorker.close()]);
+  await Promise.all([worker.close(), embedWorker.close(), agentWorker.close()]);
   await closeDb();
   process.exit(0);
 };

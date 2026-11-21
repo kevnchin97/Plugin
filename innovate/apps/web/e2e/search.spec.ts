@@ -64,14 +64,16 @@ test("natural-language search ranks images and video keyframes by what they look
   const neonTitles = titles(neon.hits);
   expect(neonTitles).toContain("Neon sweep");
   expect(neonTitles.indexOf("Neon sweep")).toBeLessThan(neonTitles.indexOf("Dusk falloff") === -1 ? Infinity : neonTitles.indexOf("Dusk falloff"));
-  const filmHit = neon.hits.find((h) => h.reference.id === filmId)!;
+  // The film's best-matching scene is the neon shot (videos only, so the check doesn't depend on
+  // where the relevance cut-off falls relative to the GIF).
+  const filmHit = (await search(page, "pink and teal neon light", "&type=video")).hits.find((h) => h.reference.id === filmId)!;
   expect(filmHit.time).toBeGreaterThanOrEqual(3.4); // the neon shot runs 3.5 s – 6.5 s
   expect(filmHit.time).toBeLessThan(6.6);
 
   // Cells: the amber-on-violet GIF is the top extract; the film hit lands on that shot.
   const cells = await search(page, "scattered golden dots on purple");
   expect(cells.hits.filter((h) => h.reference.type !== "video")[0]?.reference.title).toBe("Cells, amber on violet");
-  const cellsFilm = cells.hits.find((h) => h.reference.id === filmId)!;
+  const cellsFilm = (await search(page, "scattered golden dots on purple", "&type=video")).hits.find((h) => h.reference.id === filmId)!;
   expect(cellsFilm.time).toBeGreaterThanOrEqual(6.4);
   expect(cellsFilm.time).toBeLessThan(9.6);
 

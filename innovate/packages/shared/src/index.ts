@@ -9,3 +9,4 @@ export * from "./boards";
 export * from "./feedback";
 export * from "./shots";
 export * from "./present";
+export * from "./agents";
