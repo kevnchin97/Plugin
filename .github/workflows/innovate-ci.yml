@@ -45,8 +45,9 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm fixtures
-      - run: pnpm test
+      # Migrate before unit tests: some (e.g. the worker's digest test) use the database.
       - run: pnpm db:migrate
+      - run: pnpm test
       - run: pnpm --filter @innovate/web exec playwright install --with-deps chromium
       - run: pnpm e2e
         env: { CI: "true" }
