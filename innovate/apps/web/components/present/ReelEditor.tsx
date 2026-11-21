@@ -159,10 +159,13 @@ export function ReelEditor({ data, boards }: { data: ReelData; boards: { id: str
                         data-testid="reel-item"
                       >
                         <div className="h-14 bg-player">
-                          {m?.thumbnailUrl && (
+                          {m?.playUrl ? (
+                            // The frame at the trim-in point (media fragment), not the reference's poster.
+                            <video src={`${m.playUrl}#t=${(it.inSec ?? 0) + 0.05}`} muted preload="metadata" playsInline className="pointer-events-none h-full w-full object-cover" />
+                          ) : m?.thumbnailUrl ? (
                             // eslint-disable-next-line @next/next/no-img-element -- signed storage URL
                             <img src={m.thumbnailUrl} alt="" className="h-full w-full object-cover" />
-                          )}
+                          ) : null}
                         </div>
                         <div className="flex justify-between px-1.5 py-0.5 text-2xs">
                           <span className="truncate text-text-muted">{m?.title}</span>

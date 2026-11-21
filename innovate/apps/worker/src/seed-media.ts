@@ -60,6 +60,6 @@ for (;;) {
   await new Promise((res) => setTimeout(res, 1000));
 }
 const seeded = await seedBoards({ workspaceId: owner.workspaceId, userId: owner.userId, filmId: id });
-console.log(`seeded boards: ${SEED_BOARDS.join(", ")} (open /boards/${seeded.winter})`);
+console.log(`seeded boards: ${SEED_BOARDS.join(", ")} (open /boards/${seeded.winter}), shot list and treatment deck (/decks/${seeded.deck})`);
 await closeDb();
 process.exit(0);

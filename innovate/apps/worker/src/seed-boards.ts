@@ -6,7 +6,7 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { and, boardItems, boards, eq, inArray, references, shotLists, shots } from "@innovate/db";
+import { and, boardItems, boards, decks, eq, inArray, references, shotLists, shots, slides } from "@innovate/db";
 import { exportGif, exportStill, type SourceInfo } from "@innovate/media";
 import { frameToSeconds } from "@innovate/shared";
 import { db, storage } from "./context";
@@ -146,5 +146,24 @@ export async function seedBoards(opts: { workspaceId: string; userId: string; fi
   await d.insert(shots).values(
     plan.map(({ ref: k, ...p }, i) => ({ ...p, workspaceId: opts.workspaceId, shotListId: list!.id, position: (i + 1) * 1024, motionReferenceId: k ? refIds[k] : null })),
   );
-  return { winter, night, handheld, locations, shotList: list!.id };
+  // SPEC §8: a treatment deck, drafted from the Winter Ad board.
+  const DECK = "Commercial: Winter Ad, treatment";
+  await d.delete(decks).where(and(eq(decks.workspaceId, opts.workspaceId), eq(decks.title, DECK)));
+  const [deck] = await d.insert(decks).values({ workspaceId: opts.workspaceId, title: DECK, boardId: winter, createdBy: opts.userId }).returning({ id: decks.id });
+  const r = (k: string) => refIds[k]!;
+  const deckSlides: { layout: (typeof slides.$inferInsert)["layout"]; section: string; heading: string; body: string; media?: string[] }[] = [
+    { layout: "title", section: "title", heading: "Winter Ad", body: "Treatment · 60 s and 30 s", media: [r("dusk")] },
+    { layout: "text", section: "logline", heading: "Logline", body: "A night-shift nurse drives home through the first snow of the year and finds, for once, that the whole town is quiet enough to hear." },
+    { layout: "media-text", section: "tone", heading: "Tone", body: "Quiet, cold, a little lonely. Warmth only from practicals. Hold every shot longer than feels safe.", media: [r("ember")] },
+    { layout: "grid", section: "look", heading: "Look and feel", body: "Tungsten practicals against blue windows. Grain kept, blacks pushed, highlights protected.", media: [r("dusk"), r("neon"), r("cells"), r("ember")] },
+    { layout: "media-text", section: "characters", heading: "Characters", body: "Mara, 40s. Tired, kind, alone with the radio. We see her mostly through glass.", media: [r("fractal")] },
+    { layout: "grid", section: "locations", heading: "Locations", body: "The ridge road, the closed petrol station, the lake car park.", media: [r("fractal"), r("dusk")] },
+    { layout: "media-text", section: "shots", heading: "Shot approach", body: "Slow push-ins, locked-off wides, one handheld moment at the lake. Motion references play in the live deck.", media: [r("pushin"), r("neon")] },
+    { layout: "media", section: "", heading: "The first snow", body: "", media: [r("neon")] },
+  ];
+  await d.insert(slides).values(
+    deckSlides.map((s, i) => ({ workspaceId: opts.workspaceId, deckId: deck!.id, position: (i + 1) * 1024, layout: s.layout, section: s.section, heading: s.heading, body: s.body, mediaIds: s.media ?? [] })),
+  );
+
+  return { winter, night, handheld, locations, shotList: list!.id, deck: deck!.id };
 }

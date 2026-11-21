@@ -30,6 +30,8 @@ export function reelSegments(r: ReelSequence): Segment[] {
   return out;
 }
 
+const fmtDur = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
+
 export function reelDuration(r: ReelSequence) {
   return reelSegments(r).reduce((a, s) => a + (s.kind === "card" ? REEL_CARD_SECONDS : s.end - s.start), 0);
 }
@@ -113,18 +115,27 @@ export function ReelPlayer({ reel, autoStart = false }: { reel: ReelSequence; au
       ) : (
         <div key={seg?.key} className="grid h-full w-full place-items-center px-8 text-center" data-testid="reel-card">
           <div>
-            <div className="font-semibold tracking-[-0.02em]" style={{ fontSize: "clamp(20px,4vw,56px)" }}>
+            <div className="leading-[1.1] font-semibold tracking-[-0.02em]" style={{ fontSize: "clamp(20px,4vw,56px)" }}>
               {seg?.title}
             </div>
-            {seg?.sub && <div className="mt-2 text-white/60" style={{ fontSize: "clamp(12px,1.6vw,22px)" }}>{seg.sub}</div>}
+            {seg?.sub && <div className="mt-3 text-white/60" style={{ fontSize: "clamp(12px,1.6vw,22px)" }}>{seg.sub}</div>}
           </div>
         </div>
       )}
       {nextClip?.kind === "clip" && <video src={nextClip.url} preload="auto" muted className="hidden" aria-hidden />}
 
       {(!started || done) && (
-        <button type="button" onClick={start} className="absolute inset-0 grid place-items-center bg-black/40 hover:bg-black/30" aria-label={done ? "Play the reel again" : `Play ${reel.title}`}>
-          <span className="grid h-16 w-16 place-items-center rounded-full bg-white/90 text-2xl text-black">{done ? "↺" : "▶"}</span>
+        <button
+          type="button"
+          onClick={start}
+          className="absolute inset-x-0 bottom-0 flex h-1/3 items-end justify-center bg-gradient-to-t from-black/55 to-transparent pb-[6%]"
+          aria-label={done ? "Play the reel again" : `Play ${reel.title}`}
+        >
+          <span className="inline-flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 text-sm font-medium text-black shadow-md hover:bg-white">
+            <span aria-hidden>{done ? "↺" : "▶"}</span>
+            {done ? "Play again" : "Play"}
+            <span className="font-mono text-xs text-black/60">{fmtDur(reelDuration(reel))}</span>
+          </span>
         </button>
       )}
       {started && !done && (

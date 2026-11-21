@@ -71,3 +71,26 @@ export async function uploadVideo(page: Page, file: string) {
   await expect(page).toHaveURL(/\/make\/[0-9a-f-]{36}$/, { timeout: 60_000 });
   await expect(page.getByTestId("scene").first()).toBeVisible({ timeout: 90_000 });
 }
+
+/** Export a GIF/still/clip from a reference through the API, wait for the worker, and save it (optionally onto a board). */
+export async function exportAndSave(
+  page: Page,
+  referenceId: string,
+  req: { kind: "gif"; inFrame: number; outFrame: number } | { kind: "clip"; inFrame: number; outFrame: number } | { kind: "still"; frame: number },
+  save: { title?: string; boardId?: string } = {},
+): Promise<string> {
+  const data =
+    req.kind === "still"
+      ? { kind: "still", referenceId, frame: req.frame, format: "jpg" }
+      : req.kind === "gif"
+        ? { kind: "gif", referenceId, inFrame: req.inFrame, outFrame: req.outFrame, options: { width: 320, fps: 10, loop: "loop", quality: 60 } }
+        : { kind: "clip", referenceId, inFrame: req.inFrame, outFrame: req.outFrame };
+  const { job } = await (await page.request.post("/api/exports", { data })).json();
+  await expect.poll(async () => (await (await page.request.get(`/api/jobs/${job.id}`)).json()).job.status, { timeout: 90_000 }).toBe("completed");
+  const saved = await page.request.post(`/api/jobs/${job.id}/save`, { data: save });
+  expect(saved.ok()).toBe(true);
+  return (await saved.json()).referenceId as string;
+}
+
+/** The reference id of the video open in the editor (/make/:id). */
+export const editorRefId = (page: Page) => page.url().split("/make/")[1]!.split("?")[0]!;
