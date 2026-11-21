@@ -7,3 +7,4 @@ export * from "./tokens";
 export * from "./ingest";
 export * from "./boards";
 export * from "./feedback";
+export * from "./shots";

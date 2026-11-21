@@ -1,7 +1,7 @@
 # Innovate: project memory
 
 Visual research workspace for filmmakers. Product + technical spec: `../prompts/innovate-claude-code/SPEC.md`
-(source of truth). Milestones are in SPEC §7; **M0–M4 are done** (scaffold, GIF Maker, boards, sharing, adapters + extension).
+(source of truth). Milestones are in SPEC §7; **M0–M5 are done** (scaffold, GIF Maker, boards, sharing, adapters + extension, shot lists).
 
 ## Commands (run from `innovate/`)
 
@@ -31,6 +31,8 @@ apps/web         Next.js 16 App Router (UI + API routes). Auth.js v5 in auth.ts.
   components/board/   BoardView (header, toolbar, Unsorted tray), BoardCanvas (dnd-kit canvas), BoardGrid,
                       useBoard (optimistic state, batched saves, session undo/redo), cards
   components/library/ LibraryGrid (TanStack Virtual masonry)
+  components/shotlist/ ShotListView (sortable rows, motion cells, reference panel, CSV/PDF, share)
+  lib/shotlists.ts load/edit shots (publishes to rt room shotlist:<id>), CSV rows, motion link base
   lib/boards.ts    board loading, applyOps (atomic batch edits), placeOnBoard, unsorted, listBoards
   lib/feedback.ts  share links (resolve, unlock, guests), comments, favorites, activity, notifications
   app/s/[token]    public share page (no login); /api/s/[token]/* guest API (rate-limited, scoped)
@@ -41,7 +43,7 @@ apps/realtime    thin `ws` server: HMAC tickets from the web app, rooms + presen
   lib/shortcuts.ts    the ONE shortcut table: keymap + ? overlay both read it
   e2e/             Playwright specs (milestone "done when" criteria)
 apps/worker      BullMQ worker: jobs/ingest.ts (probe, CFR master if VFR, one-decode analysis, thumbnails,
-                 GIF density), jobs/export.ts
+                 GIF density), export.ts, import.ts (images by URL), pdf.ts (shot lists, pdfkit), digest.ts
 packages/db      Drizzle schema, migrations (drizzle/), seed. Table for references is `refs` (reserved word).
 packages/media   Pure ffmpeg wrappers: probe, proxy, filmstrip, scene detection, still/GIF/clip, fixtures
 packages/shared  Types, zod schemas, timecode math, job contract, GIF params/estimate, design tokens,
@@ -89,6 +91,10 @@ fixtures/        Generated test media (gitignored)
   `apps/web/e2e/fake-sites.mjs` (fake pages + fake Vimeo API) with INGEST_ALLOW_PRIVATE_URLS=true.
 - **Extension auth:** personal tokens (`api_tokens`, SHA-256 hash stored), `Authorization: Bearer inv_…` on `/api/ext/*`
   (`requireBearer`). Saves go through `lib/save.ts` (`saveFromWeb`), shared with text-to-save (M8).
+- **Shot lists (M5):** `shots.position` is a float order key (`positionBetween`); "#" is free text. Motion refs are any
+  reference; the PDF embeds each one's first frame (ffmpeg on the worker) and links to the live share link if one
+  exists, else the app. Share links for shot lists are view-only. In e2e, wait ~100 ms after a dnd-kit drop before
+  clicking (`dragTo` does): dnd-kit swallows clicks for ~50 ms after a drag.
 - **Ref callbacks that other components read in layout effects must be stable** (`useCallback`): an inline ref
   callback is reset to null on every render until after children's layout effects (this hid board arrows).
 - **Honest gaps:** anything stubbed carries `TODO(M#)`.

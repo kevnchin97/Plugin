@@ -27,6 +27,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <nav className="flex items-center gap-1" aria-label="Main">
               <NavLink href="/">Boards</NavLink>
               <NavLink href="/library">Library</NavLink>
+              <NavLink href="/shotlists">Shot lists</NavLink>
               <NavLink href="/make">GIF Maker</NavLink>
             </nav>
             <div className="ml-auto flex items-center gap-2">

@@ -46,13 +46,21 @@ export interface ImportJobData {
   as: "original" | "thumbnail";
 }
 
+/** Render a shot list to PDF (first frames via ffmpeg, so it runs on the worker). */
+export interface PdfJobData {
+  type: "pdf";
+  jobId: string;
+  workspaceId: string;
+  shotListId: string;
+}
+
 /** Daily email digest of unsent notifications (repeatable, scheduled by the worker). */
 export interface DigestJobData {
   type: "digest";
   jobId: string;
 }
 
-export type MediaJobData = IngestJobData | ExportJobData | DigestJobData | ImportJobData;
+export type MediaJobData = IngestJobData | ExportJobData | DigestJobData | ImportJobData | PdfJobData;
 
 export interface ExportOutput {
   key: string;

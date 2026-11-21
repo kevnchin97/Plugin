@@ -21,7 +21,7 @@ export const POST = route(async (req: Request, { params }: { params: Promise<{ i
     .select()
     .from(mediaJobs)
     .where(and(eq(mediaJobs.id, id), eq(mediaJobs.workspaceId, ctx.workspaceId)));
-  if (!job || job.type !== "export") throw notFound("Export not found");
+  if (!job || job.type !== "export" || !job.referenceId) throw notFound("Export not found");
   if (job.savedReferenceId) return NextResponse.json({ referenceId: job.savedReferenceId, alreadySaved: true });
   if (job.status !== "completed" || !job.output || !job.request) throw new HttpError(409, "The export hasn't finished yet.");
 

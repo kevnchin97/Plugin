@@ -3,6 +3,8 @@ import { headers } from "next/headers";
 import { z } from "zod";
 import { rateLimit } from "@innovate/shared/realtime";
 import { SharedBoard } from "@/components/share/SharedBoard";
+import { SharedShotList } from "@/components/share/SharedShotList";
+import { loadShotList } from "@/lib/shotlists";
 import { SharePassword } from "@/components/share/SharePassword";
 import { Logo } from "@/components/ui/Logo";
 import { ToastProvider } from "@/components/ui/Toasts";
@@ -41,6 +43,13 @@ export default async function SharePage({ params, searchParams }: { params: Prom
       />
     );
   if (!share.unlocked) return <SharePassword token={token} />;
+
+  if (share.link.targetType === "shot_list") {
+    const data = await loadShotList(share.link.workspaceId, share.link.targetId).catch(() => null);
+    if (!data) return <Message title="Link not found" body="This shot list was deleted." />;
+    return <SharedShotList token={token} data={data} />;
+  }
+  if (share.link.targetType !== "board") return <Message title="Not available yet" body="This kind of link isn't supported here." />;
 
   const requested = z.uuid().safeParse((await searchParams).board);
   const boardId = requested.success ? requested.data : share.link.targetId;

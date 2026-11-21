@@ -43,6 +43,13 @@
       "when": 1795219454653,
       "tag": "0005_api_tokens",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1795220314867,
+      "tag": "0006_shot_lists",
+      "breakpoints": true
     }
   ]
 }

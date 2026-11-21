@@ -187,8 +187,9 @@ export const mediaJobs = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
-    referenceId: uuid("reference_id").notNull().references(() => references.id, { onDelete: "cascade" }),
-    type: text("type").$type<"ingest" | "export" | "import">().notNull(),
+    /** Null for jobs that aren't about one reference (e.g. a shot-list PDF). */
+    referenceId: uuid("reference_id").references(() => references.id, { onDelete: "cascade" }),
+    type: text("type").$type<"ingest" | "export" | "import" | "pdf">().notNull(),
     /** Same request => same key => same job and output (idempotency). */
     idempotencyKey: text("idempotency_key").notNull(),
     status: text("status").$type<JobStatus>().notNull().default("queued"),
@@ -418,3 +419,48 @@ export const apiTokens = pgTable(
   },
   (t) => [index("api_tokens_user_idx").on(t.userId)],
 );
+
+/* ---------- Shot lists (M5) ---------- */
+
+export const framingEnum = pgEnum("framing", ["ECU", "CU", "MCU", "MS", "MWS", "WS", "EWS", "OTS", "POV", "Insert"]);
+export const shotStatusEnum = pgEnum("shot_status", ["idea", "planned", "approved", "shot"]);
+
+export const shotLists = pgTable(
+  "shot_lists",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+    title: text("title").notNull().default("Untitled shot list"),
+    /** The board this list was planned from (its references show in the side panel first). */
+    boardId: uuid("board_id").references(() => boards.id, { onDelete: "set null" }),
+    createdBy: text("created_by").references(() => users.id, { onDelete: "set null" }),
+    ...timestamps,
+  },
+  (t) => [index("shot_lists_workspace_idx").on(t.workspaceId, t.updatedAt)],
+);
+
+export const shots = pgTable(
+  "shots",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+    shotListId: uuid("shot_list_id").notNull().references(() => shotLists.id, { onDelete: "cascade" }),
+    position: real("position").notNull().default(0),
+    number: text("number").notNull().default(""),
+    scene: text("scene").notNull().default(""),
+    setting: text("setting").notNull().default(""),
+    description: text("description").notNull().default(""),
+    framing: framingEnum("framing"),
+    movement: text("movement").notNull().default(""),
+    lens: text("lens").notNull().default(""),
+    rig: text("rig").notNull().default(""),
+    durationSec: real("duration_sec"),
+    status: shotStatusEnum("status").notNull().default("idea"),
+    motionReferenceId: uuid("motion_reference_id").references(() => references.id, { onDelete: "set null" }),
+    ...timestamps,
+  },
+  (t) => [index("shots_list_idx").on(t.shotListId, t.position)],
+);
+
+export type ShotList = typeof shotLists.$inferSelect;
+export type Shot = typeof shots.$inferSelect;

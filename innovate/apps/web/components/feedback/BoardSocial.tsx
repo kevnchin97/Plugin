@@ -127,7 +127,20 @@ interface Share {
 
 const PERM_LABEL = { view: "Can view", favorite: "Can view and favorite", comment: "Can view, favorite and comment" } as const;
 
-export function ShareDialog({ boardId, onError }: { boardId: string; onError(m: string): void }) {
+export function ShareDialog({
+  boardId,
+  endpoint = `/api/boards/${boardId}/shares`,
+  viewOnly = false,
+  noun = "board",
+  onError,
+}: {
+  boardId: string;
+  endpoint?: string;
+  /** Shot lists share as view-only live links, so the access picker is hidden. */
+  viewOnly?: boolean;
+  noun?: string;
+  onError(m: string): void;
+}) {
   const [open, setOpen] = useState(false);
   const [shares, setShares] = useState<Share[]>([]);
   const [permission, setPermission] = useState<Share["permission"]>("comment");
@@ -137,11 +150,11 @@ export function ShareDialog({ boardId, onError }: { boardId: string; onError(m: 
 
   useEffect(() => {
     if (!open) return;
-    void fetch(`/api/boards/${boardId}/shares`).then(async (r) => r.ok && setShares((await r.json()).shares));
-  }, [open, boardId]);
+    void fetch(endpoint).then(async (r) => r.ok && setShares((await r.json()).shares));
+  }, [open, endpoint]);
 
   const create = async () => {
-    const res = await fetch(`/api/boards/${boardId}/shares`, {
+    const res = await fetch(endpoint, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ permission, password: password || undefined, expiresAt: expires || undefined }),
@@ -170,10 +183,14 @@ export function ShareDialog({ boardId, onError }: { boardId: string; onError(m: 
           aria-describedby={undefined}
           className="fixed top-1/2 left-1/2 z-50 w-[min(520px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border-strong bg-surface p-5 shadow-[0_24px_80px_rgba(0,0,0,0.28)] focus:outline-none"
         >
-          <Dialog.Title className="text-lg font-semibold">Share this board</Dialog.Title>
-          <p className="mt-1 text-sm text-text-muted">Anyone with the link can open it without an account. Guests give a name to favorite or comment.</p>
+          <Dialog.Title className="text-lg font-semibold">Share this {noun}</Dialog.Title>
+          <p className="mt-1 text-sm text-text-muted">
+            {viewOnly
+              ? `Anyone with the link sees the ${noun} live, without an account.`
+              : "Anyone with the link can open it without an account. Guests give a name to favorite or comment."}
+          </p>
           <div className="mt-4 grid grid-cols-[1fr_1fr] gap-2.5">
-            <label className="col-span-2 text-xs text-text-muted">
+            <label className={`col-span-2 text-xs text-text-muted ${viewOnly ? "hidden" : ""}`}>
               Access
               <select value={permission} onChange={(e) => setPermission(e.target.value as Share["permission"])} className="mt-1 h-8 w-full rounded-md border border-border-strong bg-surface-2 px-2 text-sm text-text" aria-label="Link access">
                 {(["view", "favorite", "comment"] as const).map((p) => (

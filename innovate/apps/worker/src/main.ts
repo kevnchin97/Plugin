@@ -6,6 +6,7 @@ import { env } from "./env";
 import { runExport } from "./jobs/export";
 import { sendDigests } from "./jobs/digest";
 import { runImport } from "./jobs/import";
+import { runPdf } from "./jobs/pdf";
 import { runIngest } from "./jobs/ingest";
 
 function readable(err: unknown): string {
@@ -15,6 +16,10 @@ function readable(err: unknown): string {
 
 async function handle(job: Job<MediaJobData>) {
   if (job.data.type === "digest") return sendDigests();
+  if (job.data.type === "pdf") {
+    await db.update(mediaJobs).set({ status: "active", attempts: job.attemptsMade + 1 }).where(eq(mediaJobs.id, job.data.jobId));
+    return runPdf(job as Job<never>);
+  }
   if (job.data.type === "import") {
     await db.update(mediaJobs).set({ status: "active", attempts: job.attemptsMade + 1 }).where(eq(mediaJobs.id, job.data.jobId));
     return runImport(job as Job<never>);

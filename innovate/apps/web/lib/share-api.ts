@@ -10,6 +10,8 @@ export async function shareRequest(token: string, opts: { boardId?: string | nul
   const ip = (h.get("x-forwarded-for") ?? "").split(",")[0]!.trim() || h.get("x-real-ip") || "local";
   if (!(await rateLimit(`share:${token}:${ip}`, opts.limit ?? 240, 60))) throw new HttpError(429, "Too many requests. Wait a minute and try again.");
   const share = await requireShare(token);
+  // Non-board links (shot lists, decks, reels) address only their own target.
+  if (share.link.targetType !== "board") return { share, boardId: share.link.targetId, ip };
   const boardId = opts.boardId ?? share.link.targetId;
   if (!(await boardInShare(share.link, boardId))) throw new HttpError(404, "That board isn't part of this link.");
   return { share, boardId, ip };

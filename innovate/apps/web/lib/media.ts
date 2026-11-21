@@ -148,6 +148,7 @@ export async function upsertJob(input: {
 }
 
 function dataFor(job: MediaJob) {
+  if (!job.referenceId) throw new Error(`Job ${job.id} has no reference`);
   return job.type === "ingest"
     ? { type: "ingest" as const, jobId: job.id, referenceId: job.referenceId, workspaceId: job.workspaceId }
     : { type: "export" as const, jobId: job.id, referenceId: job.referenceId, workspaceId: job.workspaceId, request: job.request! };

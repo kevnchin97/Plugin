@@ -6,7 +6,7 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { and, boardItems, boards, eq, inArray, references } from "@innovate/db";
+import { and, boardItems, boards, eq, inArray, references, shotLists, shots } from "@innovate/db";
 import { exportGif, exportStill, type SourceInfo } from "@innovate/media";
 import { frameToSeconds } from "@innovate/shared";
 import { db, storage } from "./context";
@@ -133,5 +133,18 @@ export async function seedBoards(opts: { workspaceId: string; userId: string; fi
     ref("fractal", 0, 0, 236, { columnId: close, position: 2048 }),
     { id: crypto.randomUUID(), kind: "note", x: 330, y: 40, w: 280, content: { text: "Breathing camera\nShoulder rig, 35mm, stay within arm's reach." } },
   ]);
-  return { winter, night, handheld, locations };
+  // A shot list with motion references (SPEC §9).
+  await d.delete(shotLists).where(and(eq(shotLists.workspaceId, opts.workspaceId), eq(shotLists.title, "Commercial: Winter Ad, day 1")));
+  const [list] = await d.insert(shotLists).values({ workspaceId: opts.workspaceId, title: "Commercial: Winter Ad, day 1", boardId: winter, createdBy: opts.userId }).returning({ id: shotLists.id });
+  const plan: (Omit<typeof shots.$inferInsert, "workspaceId" | "shotListId" | "position"> & { ref?: string })[] = [
+    { number: "1", scene: "1", setting: "Ridge road, dusk", description: "Car crests the ridge; sun drops behind the hills. Hold on the empty road after it passes.", framing: "EWS", movement: "Locked off", lens: "24mm", rig: "Sticks", durationSec: 8, status: "approved", ref: "dusk" },
+    { number: "2", scene: "1", setting: "Ridge road, dusk", description: "Headlights sweep across frame as the car turns towards camera.", framing: "WS", movement: "Slow pan", lens: "35mm", rig: "Sticks", durationSec: 4, status: "approved", ref: "neon" },
+    { number: "3", scene: "2", setting: "Cabin interior", description: "She lights the stove; tungsten bloom fills the room.", framing: "MS", movement: "Handheld drift", lens: "50mm", rig: "Shoulder", durationSec: 5, status: "planned", ref: "ember" },
+    { number: "4", scene: "2", setting: "Cabin interior", description: "Slow push-in on the frosted window, cold blue outside.", framing: "CU", movement: "Push-in", lens: "85mm", rig: "Dolly", durationSec: 6, status: "planned", ref: "pushin" },
+    { number: "5", scene: "3", setting: "Lake car park", description: "Snow catches the light; abstract texture for the logo reveal.", framing: "Insert", movement: "Static", lens: "100mm macro", rig: "Slider", durationSec: 3, status: "idea", ref: "cells" },
+  ];
+  await d.insert(shots).values(
+    plan.map(({ ref: k, ...p }, i) => ({ ...p, workspaceId: opts.workspaceId, shotListId: list!.id, position: (i + 1) * 1024, motionReferenceId: k ? refIds[k] : null })),
+  );
+  return { winter, night, handheld, locations, shotList: list!.id };
 }

@@ -54,6 +54,8 @@ export async function dragTo(page: Page, from: Locator, to: { x: number; y: numb
   await page.mouse.move(a.x + 50, a.y + 40, { steps: 4 });
   await page.mouse.move(target.x, target.y, { steps: 12 });
   await page.mouse.up();
+  // dnd-kit swallows clicks for ~50 ms after a drag ends (so the drop isn't also a click).
+  await page.waitForTimeout(120);
 }
 
 export async function createBoard(page: Page, title: string, parentBoardId?: string): Promise<string> {
