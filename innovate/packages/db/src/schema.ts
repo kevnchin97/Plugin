@@ -233,10 +233,16 @@ export const boards = pgTable(
     parentBoardId: uuid("parent_board_id"),
     title: text("title").notNull().default("Untitled board"),
     view: boardViewEnum("view").notNull().default("canvas"),
+    /** The workspace's Home board (Milanote-style): every top-level board is a card on it. One per workspace. */
+    isHome: boolean("is_home").notNull().default(false),
     createdBy: text("created_by").references(() => users.id, { onDelete: "set null" }),
     ...timestamps,
   },
-  (t) => [index("boards_workspace_idx").on(t.workspaceId, t.updatedAt), index("boards_parent_idx").on(t.parentBoardId)],
+  (t) => [
+    index("boards_workspace_idx").on(t.workspaceId, t.updatedAt),
+    index("boards_parent_idx").on(t.parentBoardId),
+    uniqueIndex("boards_home_uq").on(t.workspaceId).where(sql`${t.isHome}`),
+  ],
 );
 
 export const boardVisits = pgTable(
@@ -262,6 +268,10 @@ export interface BoardItemContent {
   host?: string;
   from?: string;
   to?: string;
+  /** Notes: white (default), yellow sticky, or a label colour. */
+  color?: "white" | "yellow" | "green" | "brown" | "slate" | "blue" | "red" | "ink";
+  /** Colour swatch cards (a note with a swatch): #rrggbb. */
+  swatch?: string;
 }
 
 export const boardItems = pgTable(

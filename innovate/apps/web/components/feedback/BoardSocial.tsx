@@ -173,7 +173,7 @@ export function ShareDialog({
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger asChild>
-        <Button size="sm" variant="secondary">
+        <Button size="sm" variant="primary">
           Share
         </Button>
       </Dialog.Trigger>

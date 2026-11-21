@@ -8,10 +8,10 @@ import { runFfmpeg } from "@innovate/media";
 import { type ExportOutput, FRAMING_LABEL, formatShotDuration, type PdfJobData, slugify } from "@innovate/shared";
 import { db, dirs, storage } from "../context";
 
-const INK = "#211d18";
-const MUTED = "#6b6357";
-const RULE = "#e3dccf";
-const ACCENT = "#a4481a";
+const INK = "#1e1e1e";
+const MUTED = "#676767";
+const RULE = "#e2e2e2";
+const ACCENT = "#2a64d8";
 
 async function motionBase(workspaceId: string, listId: string) {
   const app = (process.env.AUTH_URL ?? "http://localhost:3000").replace(/\/$/, "");

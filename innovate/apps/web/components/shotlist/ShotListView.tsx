@@ -3,13 +3,13 @@ import { type CollisionDetection, DndContext, type DragEndEvent, DragOverlay, ty
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import * as Dialog from "@radix-ui/react-dialog";
-import Link from "next/link";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FRAMING_LABEL, FRAMINGS, formatShotDuration, positionBetween, SHOT_STATUSES, type ShotPatch, type ShotStatus } from "@innovate/shared";
 import { aspectOf, ReferenceBody } from "@/components/board/cards";
 import { ShareDialog } from "@/components/feedback/BoardSocial";
 import { MotionMedia } from "@/components/media/MotionMedia";
 import { Button } from "@/components/ui/Button";
+import { ShellSlot } from "@/components/shell/ShellSlot";
 import { useToast } from "@/components/ui/Toasts";
 import type { RefLite } from "@/lib/boards";
 import type { ShotDTO, ShotListData } from "@/lib/shotlists";
@@ -422,11 +422,10 @@ export function ShotListView({ initial, boards }: { initial: ShotListData; board
     <DndContext id="shotlist-dnd" sensors={sensors} collisionDetection={collision} onDragStart={onDragStart} onDragEnd={onDragEnd}>
       <div className="flex h-full flex-col">
         <div className="flex h-10 shrink-0 items-center gap-2 border-b border-border px-4 text-sm">
-          <Link href="/shotlists" className="text-text-faint hover:text-text">
-            Shot lists
-          </Link>
-          <span className="text-text-faint">/</span>
-          <input defaultValue={title} key={title} onBlur={(e) => void saveTitle(e.target.value)} onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()} aria-label="Shot list title" className="h-7 min-w-[240px] rounded-sm border border-transparent bg-transparent px-1.5 font-medium hover:border-border focus:border-accent focus:outline-none" data-testid="shotlist-title" />
+          <ShellSlot slot="crumbs">
+            <span className="text-text-faint">/</span>
+            <input defaultValue={title} key={title} onBlur={(e) => void saveTitle(e.target.value)} onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()} aria-label="Shot list title" className="h-8 min-w-[240px] rounded-md bg-transparent px-1 text-md font-medium hover:bg-surface-3 focus:bg-surface-3 focus:outline-none" data-testid="shotlist-title" />
+          </ShellSlot>
           <span className="text-xs text-text-faint tabular" data-testid="totals">
             {totals.count} shots · {formatShotDuration(totals.seconds) || "0s"}
           </span>
@@ -522,7 +521,7 @@ export function ShotListView({ initial, boards }: { initial: ShotListData; board
       </div>
       <DragOverlay dropAnimation={null}>
         {dragRef ? (
-          <div className="w-[160px] overflow-hidden rounded-md border border-border bg-surface shadow-[0_18px_40px_rgba(33,29,24,0.22)]">
+          <div className="w-[160px] overflow-hidden rounded-md border border-border bg-surface shadow-[0_18px_40px_rgba(0,0,0,0.22)]">
             <ReferenceBody reference={dragRef} hovering={false} />
           </div>
         ) : null}

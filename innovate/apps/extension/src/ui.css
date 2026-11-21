@@ -1,15 +1,15 @@
 /* Extension UI, using the app's warm light tokens (copied values: the extension has no Tailwind). */
 :root {
   color-scheme: light;
-  --bg: #f2ede3;
-  --surface: #fbf8f2;
-  --border: #e3dccf;
-  --border-strong: #cfc6b5;
-  --text: #211d18;
-  --muted: #5f574c;
-  --faint: #6b6357;
-  --accent: #a4481a;
-  --accent-strong: #8c3c13;
+  --bg: #efefef;
+  --surface: #ffffff;
+  --border: #e2e2e2;
+  --border-strong: #cbcbcb;
+  --text: #1e1e1e;
+  --muted: #555555;
+  --faint: #676767;
+  --accent: #2a64d8;
+  --accent-strong: #1f52b8;
   --success: #2e7a4f;
   --danger: #b3261e;
 }
@@ -27,7 +27,7 @@ button:hover { background: var(--accent-strong); }
 button:disabled { opacity: 0.5; cursor: default; }
 button.secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border-strong); }
 .card { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); overflow: hidden; }
-.card img { display: block; width: 100%; max-height: 180px; object-fit: contain; background: #0d0c0b; }
+.card img { display: block; width: 100%; max-height: 180px; object-fit: contain; background: #111111; }
 .card .meta { padding: 8px 10px; }
 .card .title { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chip { display: inline-block; font-size: 11px; color: var(--faint); margin-right: 6px; }

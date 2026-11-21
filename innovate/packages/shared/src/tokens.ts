@@ -1,6 +1,6 @@
 /**
  * Design tokens: the one place colors, spacing, type and radii are defined (SPEC §2).
- * Decision (after M1): the app defaults to the warm light theme; dark is the alternative.
+ * Decision (after M8): the app defaults to a neutral, Milanote-like light theme; dark is the alternative.
  * `pnpm tokens` renders them to tokens.css as CSS variables + a Tailwind v4 @theme block;
  * a unit test fails if tokens.css is stale. Canvas code reads the same CSS variables.
  */
@@ -17,39 +17,71 @@ export const colors = {
     text: "#ececef",
     "text-muted": "#9b9ba4",
     "text-faint": "#66666f",
-    accent: "#f2a641",
-    "accent-strong": "#ffbb5c",
-    "accent-fg": "#140d02",
-    "accent-soft": "rgba(242, 166, 65, 0.14)",
-    "accent-line": "rgba(242, 166, 65, 0.55)",
+    accent: "#6f9dff",
+    "accent-strong": "#94b6ff",
+    "accent-fg": "#0b1020",
+    "accent-soft": "rgba(111, 157, 255, 0.14)",
+    "accent-line": "rgba(111, 157, 255, 0.55)",
     danger: "#f06464",
     success: "#4fc38c",
     player: "#000000",
     scrim: "rgba(0, 0, 0, 0.72)",
     playhead: "#ffffff",
+    "board-1": "#5b8def",
+    "board-2": "#3aa597",
+    "board-3": "#9572dc",
+    "board-4": "#e08a45",
+    "board-5": "#de6493",
+    "board-6": "#5ca657",
+    /** Label notes (white text on these) and the sticky note colour; same in both themes. */
+    "label-green": "#3e5b3f",
+    "label-brown": "#7d5f43",
+    "label-slate": "#566870",
+    "label-blue": "#2f5c8c",
+    "label-red": "#a8443a",
+    "label-ink": "#262626",
+    "note-yellow": "#fff3bf",
   },
-  /** Default: warm paper. The player and filmstrip stay near-black so footage colour reads true. */
+  /**
+   * Default: neutral, Milanote-like: a light-grey canvas with white cards and one blue accent.
+   * The player and filmstrip stay near-black so footage colour reads true.
+   */
   light: {
-    bg: "#f2ede3",
-    surface: "#fbf8f2",
-    "surface-2": "#f7f3ea",
-    "surface-3": "#ebe4d6",
-    "surface-4": "#e0d8c8",
-    border: "#e3dccf",
-    "border-strong": "#cfc6b5",
-    text: "#211d18",
-    "text-muted": "#5f574c",
-    "text-faint": "#6b6357",
-    accent: "#a4481a",
-    "accent-strong": "#8c3c13",
+    bg: "#efefef",
+    surface: "#ffffff",
+    "surface-2": "#f7f7f7",
+    "surface-3": "#ebebeb",
+    "surface-4": "#e0e0e0",
+    border: "#e2e2e2",
+    "border-strong": "#cbcbcb",
+    text: "#1e1e1e",
+    "text-muted": "#555555",
+    "text-faint": "#676767",
+    accent: "#2a64d8",
+    "accent-strong": "#1f52b8",
     "accent-fg": "#ffffff",
-    "accent-soft": "rgba(164, 72, 26, 0.10)",
-    "accent-line": "rgba(164, 72, 26, 0.5)",
-    danger: "#b3261e",
-    success: "#2e7a4f",
-    player: "#0d0c0b",
-    scrim: "rgba(33, 29, 24, 0.45)",
-    playhead: "#211d18",
+    "accent-soft": "rgba(42, 100, 216, 0.10)",
+    "accent-line": "rgba(42, 100, 216, 0.5)",
+    danger: "#c22a22",
+    success: "#2a7a3e",
+    player: "#111111",
+    scrim: "rgba(20, 20, 20, 0.45)",
+    playhead: "#1e1e1e",
+    /** Board-card icon colours (picked per board from its title). */
+    "board-1": "#4a7fe0",
+    "board-2": "#2f9e91",
+    "board-3": "#8a63d2",
+    "board-4": "#e0803a",
+    "board-5": "#d9578a",
+    "board-6": "#4f9d4a",
+    /** Label notes (white text on these) and the sticky note colour; same in both themes. */
+    "label-green": "#3e5b3f",
+    "label-brown": "#7d5f43",
+    "label-slate": "#566870",
+    "label-blue": "#2f5c8c",
+    "label-red": "#a8443a",
+    "label-ink": "#262626",
+    "note-yellow": "#fff3bf",
   },
 } as const;
 
@@ -76,6 +108,8 @@ export const radii = { xs: 2, sm: 3, md: 5, lg: 8, xl: 12 } as const;
 export const fonts = {
   sans: 'var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif',
   mono: 'var(--font-jetbrains), ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+  /** Board titles and label notes (Milanote-style editorial serif). */
+  serif: 'var(--font-serif), ui-serif, Georgia, "Times New Roman", serif',
 } as const;
 
 export const motion = { fast: "120ms", base: "180ms", ease: "cubic-bezier(0.2, 0, 0, 1)" } as const;
@@ -106,6 +140,7 @@ export function renderTokensCss(): string {
   for (const [name, px] of Object.entries(radii)) lines.push(`  --radius-${name}: ${px}px;`);
   lines.push(`  --font-sans: ${fonts.sans};`);
   lines.push(`  --font-mono: ${fonts.mono};`);
+  lines.push(`  --font-serif: ${fonts.serif};`);
   lines.push("}");
   return lines.join("\n") + "\n";
 }

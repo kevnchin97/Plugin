@@ -9,6 +9,7 @@ import {
   desc,
   eq,
   inArray,
+  isNull,
   type Reference,
   references,
   sql,
@@ -111,7 +112,7 @@ export async function loadBoard(workspaceId: string, boardId: string, userId: st
       .values({ userId, boardId })
       .onConflictDoUpdate({ target: [boardVisits.userId, boardVisits.boardId], set: { visitedAt: new Date() } });
   return {
-    board: { id: board.id, title: board.title, view: board.view, parentBoardId: board.parentBoardId, updatedAt: board.updatedAt.toISOString() },
+    board: { id: board.id, title: board.title, view: board.view, parentBoardId: board.parentBoardId, isHome: board.isHome, updatedAt: board.updatedAt.toISOString() },
     breadcrumbs: trail,
     items: items.map((i) => ({
       id: i.id,
@@ -221,11 +222,10 @@ export async function applyOps(workspaceId: string, boardId: string, ops: BoardO
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 
 /** Put a reference on a board below everything else (used by "Save to board" and uploads). */
-export async function placeOnBoard(tx: Db | Tx, workspaceId: string, boardId: string, referenceId: string, userId: string, width = 240) {
-  const [b] = await tx.select({ id: boards.id }).from(boards).where(and(eq(boards.id, boardId), eq(boards.workspaceId, workspaceId)));
-  if (!b) throw new HttpError(404, "That board doesn't exist in this workspace.");
+/** Where a new card goes: to the right of everything loose on the board (top-aligned), wrapping when wide. */
+async function nextSpot(tx: Db | Tx, boardId: string) {
   // The server doesn't know rendered card heights, so place new cards to the right of everything
-  // loose on the board (top-aligned), wrapping to a new band once the board gets wide.
+  // loose on the board, wrapping to a new band once the board gets wide.
   const loose = await tx
     .select({ x: boardItems.x, y: boardItems.y, w: boardItems.w, z: boardItems.z })
     .from(boardItems)
@@ -239,12 +239,67 @@ export async function placeOnBoard(tx: Db | Tx, workspaceId: string, boardId: st
     x = 40;
     y = bandTop + 520;
   }
+  return { x: Math.round(x), y: Math.round(y), z: maxZ + 1 };
+}
+
+export async function placeOnBoard(tx: Db | Tx, workspaceId: string, boardId: string, referenceId: string, userId: string, width = 240) {
+  const [b] = await tx.select({ id: boards.id }).from(boards).where(and(eq(boards.id, boardId), eq(boards.workspaceId, workspaceId)));
+  if (!b) throw new HttpError(404, "That board doesn't exist in this workspace.");
+  const spot = await nextSpot(tx, boardId);
   const [item] = await tx
     .insert(boardItems)
-    .values({ workspaceId, boardId, kind: "reference", referenceId, x: Math.round(x), y: Math.round(y), w: width, z: maxZ + 1, createdBy: userId })
+    .values({ workspaceId, boardId, kind: "reference", referenceId, ...spot, w: width, createdBy: userId })
     .returning({ id: boardItems.id });
   await tx.update(boards).set({ updatedAt: new Date() }).where(eq(boards.id, boardId));
   return item!.id;
+}
+
+/** Create a board as a card on its parent board (Home when none is given). */
+export async function createBoardOn(workspaceId: string, userId: string, title: string, parentBoardId?: string | null, placeCard = true) {
+  const parent = parentBoardId ? await getBoard(workspaceId, parentBoardId) : await homeBoard(workspaceId, userId);
+  return db().transaction(async (tx) => {
+    const [board] = await tx.insert(boards).values({ workspaceId, title, parentBoardId: parent.id, createdBy: userId }).returning();
+    if (!placeCard) return board!;
+    const spot = await nextSpot(tx, parent.id);
+    await tx.insert(boardItems).values({ workspaceId, boardId: parent.id, kind: "board", childBoardId: board!.id, ...spot, w: 200, createdBy: userId });
+    return board!;
+  });
+}
+
+/**
+ * The workspace's Home board (Milanote-style: the app opens on a board, and every top-level board
+ * is a card on it). Created on first use; boards with no parent (made before Home existed, or by
+ * the agent, text-to-save or the API) are adopted onto it as board cards. Idempotent and safe to
+ * call concurrently (row lock on Home while adopting).
+ */
+export async function homeBoard(workspaceId: string, userId: string | null) {
+  const d = db();
+  const find = async () => (await d.select().from(boards).where(and(eq(boards.workspaceId, workspaceId), eq(boards.isHome, true))))[0];
+  let home = await find();
+  if (!home) {
+    await d.insert(boards).values({ workspaceId, title: "Home", isHome: true, createdBy: userId }).onConflictDoNothing();
+    home = (await find())!;
+  }
+  const orphan = and(eq(boards.workspaceId, workspaceId), isNull(boards.parentBoardId), eq(boards.isHome, false));
+  const [any] = await d.select({ id: boards.id }).from(boards).where(orphan).limit(1);
+  if (any) {
+    await d.transaction(async (tx) => {
+      await tx.select({ id: boards.id }).from(boards).where(eq(boards.id, home.id)).for("update");
+      const orphans = await tx.select({ id: boards.id }).from(boards).where(orphan).orderBy(asc(boards.createdAt));
+      if (!orphans.length) return;
+      const loose = await tx
+        .select({ y: boardItems.y, z: boardItems.z })
+        .from(boardItems)
+        .where(and(eq(boardItems.boardId, home.id), sql`${boardItems.columnId} is null`));
+      const top = loose.length ? Math.max(...loose.map((i) => i.y)) + 240 : 40;
+      const z = Math.max(0, ...loose.map((i) => i.z));
+      await tx.insert(boardItems).values(
+        orphans.map((b, i) => ({ workspaceId, boardId: home.id, kind: "board" as const, childBoardId: b.id, x: 40 + (i % 6) * 232, y: top + Math.floor(i / 6) * 220, w: 200, z: z + i + 1, createdBy: userId })),
+      );
+      await tx.update(boards).set({ parentBoardId: home.id }).where(inArray(boards.id, orphans.map((b) => b.id)));
+    });
+  }
+  return home;
 }
 
 /** References on no board yet: the Unsorted tray. */
@@ -283,9 +338,9 @@ export async function listBoards(workspaceId: string, userId: string) {
   });
   const byId = new Map(all.map((b) => [b.id, b]));
   return {
-    top: all.filter((b) => !b.parentBoardId).map(dto),
+    top: all.filter((b) => !b.isHome && (!b.parentBoardId || byId.get(b.parentBoardId)?.isHome)).map(dto),
     recent: visits.map((v) => byId.get(v.boardId)).filter((b): b is (typeof all)[number] => Boolean(b)).map(dto),
-    all: all.map((b) => ({ id: b.id, title: b.title, parentBoardId: b.parentBoardId })),
+    all: all.map((b) => ({ id: b.id, title: b.title, parentBoardId: b.parentBoardId, isHome: b.isHome })),
   };
 }
 export type BoardsList = Awaited<ReturnType<typeof listBoards>>;

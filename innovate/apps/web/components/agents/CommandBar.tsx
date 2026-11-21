@@ -31,8 +31,14 @@ export function CommandBar({ enabled }: { enabled: boolean }) {
         setOpen((o) => !o);
       }
     };
+    // The board's Ask bar (and anything else) can open the command bar with this event.
+    const onAsk = () => setOpen(true);
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("innovate:ask", onAsk);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("innovate:ask", onAsk);
+    };
   }, []);
 
   const submit = async () => {

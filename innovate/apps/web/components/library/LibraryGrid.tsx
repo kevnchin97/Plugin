@@ -158,7 +158,7 @@ export function LibraryGrid({ initial, next: firstNext, boards }: { initial: Ref
         </div>
       )}
       {selected.size > 0 && (
-        <div className="sticky bottom-4 z-10 mx-auto flex w-fit items-center gap-2 rounded-lg border border-border-strong bg-surface px-3 py-2 text-sm shadow-[0_12px_30px_rgba(33,29,24,0.16)]" role="toolbar" aria-label="Selection">
+        <div className="sticky bottom-4 z-10 mx-auto flex w-fit items-center gap-2 rounded-lg border border-border-strong bg-surface px-3 py-2 text-sm shadow-[0_12px_30px_rgba(0,0,0,0.16)]" role="toolbar" aria-label="Selection">
           <span className="text-text-muted" data-testid="selection-count">
             {selected.size} selected
           </span>

@@ -10,8 +10,8 @@ import { db, dirs, storage } from "../context";
 
 /** Slide palettes: the app's light and dark tokens (packages/shared/src/tokens.ts). */
 const THEMES = {
-  paper: { bg: "#f2ede3", ink: "#211d18", muted: "#5f574c", accent: "#a4481a", media: "#16130f" },
-  night: { bg: "#0a0a0b", ink: "#ececef", muted: "#9b9ba4", accent: "#f2a641", media: "#000000" },
+  paper: { bg: "#efefef", ink: "#1e1e1e", muted: "#555555", accent: "#2a64d8", media: "#111111" },
+  night: { bg: "#0a0a0b", ink: "#ececef", muted: "#9b9ba4", accent: "#6f9dff", media: "#000000" },
 } as const;
 const W = 960;
 const H = 540;

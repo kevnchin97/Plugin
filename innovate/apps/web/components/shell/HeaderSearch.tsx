@@ -47,9 +47,9 @@ export function HeaderSearch() {
         value={q}
         onChange={(e) => setQ(e.target.value)}
         onKeyDown={(e) => e.key === "Escape" && input.current?.blur()}
-        placeholder="Search: “warm dusk light”, “neon”…"
+        placeholder="Search by look…"
         aria-label="Search the library"
-        className="h-7 w-[300px] rounded-md border border-border bg-surface-2 pr-8 pl-7 text-sm placeholder:text-text-faint focus:border-accent focus:outline-none"
+        className="h-7 w-[220px] rounded-md border border-transparent bg-surface-3 pr-8 pl-7 text-sm placeholder:text-text-faint focus:border-accent focus:outline-none"
       />
       <kbd className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 rounded-sm border border-border px-1 text-2xs text-text-faint">/</kbd>
     </form>

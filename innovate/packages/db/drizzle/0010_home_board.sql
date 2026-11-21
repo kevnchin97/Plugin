@@ -1,0 +1,2 @@
+ALTER TABLE "boards" ADD COLUMN "is_home" boolean DEFAULT false NOT NULL;--> statement-breakpoint
+CREATE UNIQUE INDEX "boards_home_uq" ON "boards" USING btree ("workspace_id") WHERE "boards"."is_home";

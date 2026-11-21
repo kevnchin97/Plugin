@@ -38,7 +38,11 @@ export async function seedBoards(opts: { workspaceId: string; userId: string; fi
 
   // Replace earlier seeds.
   const old = await d.select({ id: boards.id }).from(boards).where(and(eq(boards.workspaceId, opts.workspaceId), inArray(boards.title, [...SEED_BOARDS])));
-  if (old.length) await d.delete(boards).where(inArray(boards.id, old.map((b) => b.id)));
+  if (old.length) {
+    // Nested seed boards (Locations) first: boards.parentBoardId has no FK, so they'd be orphaned.
+    await d.delete(boards).where(inArray(boards.parentBoardId, old.map((b) => b.id)));
+    await d.delete(boards).where(inArray(boards.id, old.map((b) => b.id)));
+  }
   await d.delete(references).where(and(eq(references.parentReferenceId, film.id), eq(references.sourcePlatform, "seed")));
 
   const work = await mkdtemp(join(tmpdir(), "innovate-seed-"));
@@ -122,8 +126,25 @@ export async function seedBoards(opts: { workspaceId: string; userId: string; fi
   ]);
   await put(locations, [ref("fractal", 40, 40, 300), ref("dusk", 380, 40, 300), { id: crypto.randomUUID(), kind: "note", x: 40, y: 280, w: 300, content: { text: "Recce shortlist\nRidge road, the closed petrol station, the lake car park." } }]);
 
+  // A free-form moodboard (Milanote-style): media at different sizes, overlapping labels, a sticky,
+  // and colour swatches picked from the footage.
   const night = await mkBoard("Night Exteriors");
-  await put(night, [ref("ember", 40, 40, 320), ref("neon", 390, 40, 320), ref("cells", 740, 40, 320), { id: crypto.randomUUID(), kind: "note", x: 40, y: 300, w: 320, content: { text: "Exposure\nPush the blacks; protect the highlights on practicals." } }]);
+  const note = (x: number, y: number, w: number, text: string, color?: "yellow" | "green" | "ink" | "brown"): Item => ({ id: crypto.randomUUID(), kind: "note", x, y, w, content: color ? { text, color } : { text } });
+  const swatch = (x: number, y: number, hex: string): Item => ({ id: crypto.randomUUID(), kind: "note", x, y, w: 120, content: { swatch: hex } });
+  await put(night, [
+    ref("neon", 60, 70, 520),
+    ref("cells", 600, 70, 330),
+    ref("ember", 600, 280, 330),
+    ref("dusk", 60, 380, 250),
+    ref("pushin", 330, 380, 250),
+    note(40, 40, 230, "Night exteriors", "green"),
+    note(720, 250, 210, "Practicals only", "ink"),
+    note(960, 70, 220, "Exposure\nPush the blacks; protect the highlights on practicals. Let the windows go blue.", "yellow"),
+    swatch(960, 250, "#ff2e88"),
+    swatch(1092, 250, "#0b5a73"),
+    swatch(960, 420, "#ffb35c"),
+    swatch(1092, 420, "#3a1f5c"),
+  ]);
 
   const handheld = await mkBoard("Handheld Intimacy");
   const close = crypto.randomUUID();

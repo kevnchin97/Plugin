@@ -16,12 +16,21 @@ const content = z
     host: z.string().max(255).optional(),
     from: z.uuid().optional(),
     to: z.uuid().optional(),
+    /** Notes: a colour (labels and stickies, Milanote-style). */
+    color: z.enum(["white", "yellow", "green", "brown", "slate", "blue", "red", "ink"]).optional(),
+    /** Colour swatch cards: the colour shown, as #rrggbb. */
+    swatch: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
   })
   .strict();
+
+export const NOTE_COLORS = ["white", "yellow", "green", "brown", "slate", "blue", "red", "ink"] as const;
+export type NoteColor = (typeof NOTE_COLORS)[number];
 
 export const createBoardSchema = z.object({
   title: z.string().trim().min(1).max(200).default("Untitled board"),
   parentBoardId: z.uuid().nullable().optional(),
+  /** Also put a board card for it on the parent (the canvas adds its own card, so it sends false). */
+  placeCard: z.boolean().default(true),
 });
 
 export const updateBoardSchema = z.object({

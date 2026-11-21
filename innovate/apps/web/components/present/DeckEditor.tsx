@@ -8,6 +8,7 @@ import type { RefLite } from "@/lib/boards";
 import { download, runJob } from "@/lib/client-jobs";
 import type { DeckData } from "@/lib/present";
 import { saveLabel, useAutosave } from "@/lib/useAutosave";
+import { ShellSlot } from "@/components/shell/ShellSlot";
 import { MediaPicker } from "./MediaPicker";
 import { type SlideMedia, SlideView } from "./SlideView";
 
@@ -97,15 +98,14 @@ export function DeckEditor({ data, boards }: { data: DeckData; boards: { id: str
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex h-12 shrink-0 items-center gap-3 border-b border-border px-4">
-        <Link href="/decks" className="text-sm text-text-muted hover:text-text">
-          Decks
-        </Link>
+      <ShellSlot slot="crumbs">
         <span className="text-text-faint">/</span>
-        <input value={title} onChange={(e) => setTitle(e.target.value)} aria-label="Deck title" data-testid="deck-title" className="h-8 min-w-0 flex-1 rounded-md bg-transparent px-1 text-md font-medium hover:bg-surface-2 focus:bg-surface-2 focus:outline-none" />
+        <input value={title} onChange={(e) => setTitle(e.target.value)} aria-label="Deck title" data-testid="deck-title" className="h-8 w-[min(420px,40vw)] min-w-0 rounded-md bg-transparent px-1 text-md font-medium hover:bg-surface-3 focus:bg-surface-3 focus:outline-none" />
         <span className="text-xs text-text-faint" data-testid="save-status" role="status">
           {saveLabel(status)}
         </span>
+      </ShellSlot>
+      <ShellSlot slot="actions">
         <div className="flex rounded-md border border-border p-0.5 text-sm" role="group" aria-label="Deck theme">
           {(["paper", "night"] as const).map((t) => (
             <button key={t} type="button" aria-pressed={theme === t} onClick={() => setTheme(t)} className={`rounded-sm px-2 py-0.5 capitalize ${theme === t ? "bg-surface-3 text-text" : "text-text-muted"}`}>
@@ -124,7 +124,7 @@ export function DeckEditor({ data, boards }: { data: DeckData; boards: { id: str
         >
           Present
         </Link>
-      </div>
+      </ShellSlot>
 
       <div className="grid min-h-0 flex-1 grid-cols-[200px_1fr_300px]">
         {/* Slide rail */}

@@ -19,10 +19,11 @@ import { COLUMN_WIDTH, DEFAULT_CARD_WIDTH, hostOf, type BoardItemPatch, type New
 import { useFeedbackCounts } from "@/components/feedback/BoardSocial";
 import { useToast } from "@/components/ui/Toasts";
 import type { RefLite } from "@/lib/boards";
-import { aspectOf, BoardBody, LinkBody, NoteBody, ReferenceBody } from "./cards";
+import { aspectOf, BoardBody, LinkBody, NOTE_SWATCH_CLASS, NoteBody, ReferenceBody, SwatchBody } from "./cards";
+import { NOTE_COLORS } from "@innovate/shared";
 import { inverseUpdates, type Item, itemToNew, type BoardStore } from "./useBoard";
 
-export type Tool = "note" | "link" | "column" | "board";
+export type Tool = "note" | "link" | "column" | "board" | "swatch";
 
 interface Props {
   store: BoardStore;
@@ -32,7 +33,7 @@ interface Props {
   arrowMode: boolean;
   setArrowMode(v: boolean): void;
   createRef: React.MutableRefObject<((tool: Tool, at?: { x: number; y: number }) => void) | null>;
-  zoomRef: React.MutableRefObject<{ zoomBy(f: number): void; reset(): void; zoom: number } | null>;
+  zoomRef: React.MutableRefObject<{ zoomBy(f: number): void; reset(): void; fit(): void; zoom: number } | null>;
   onZoom(z: number): void;
   left: React.ReactNode;
   right: React.ReactNode;
@@ -41,6 +42,7 @@ interface Props {
 
 const MIN_ZOOM = 0.2;
 const MAX_ZOOM = 2.5;
+const HOME_PAN = { x: 96, y: 12 };
 
 function isTyping(t: EventTarget | null) {
   return t instanceof HTMLElement && (t.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(t.tagName));
@@ -62,7 +64,8 @@ export function BoardCanvas({ store, unsorted, onPlacedFromTray, onReturnedToTra
   const router = useRouter();
   const { items, references, childBoards, commit, boardId } = store;
   const viewport = useRef<HTMLDivElement>(null);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
+  // Start clear of the floating menu bar on the left.
+  const [pan, setPan] = useState(HOME_PAN);
   const [zoom, setZoom] = useState(1);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<string | null>(null);
@@ -114,11 +117,27 @@ export function BoardCanvas({ store, unsorted, onPlacedFromTray, onReturnedToTra
       zoomBy: (f) => zoomAt(f),
       reset: () => {
         setZoom(1);
-        setPan({ x: 0, y: 0 });
+        setPan(HOME_PAN);
+      },
+      // Fit everything on the board into view (with room for the floating toolbars).
+      fit: () => {
+        const el = viewport.current;
+        const cards = [...items.values()].filter((i) => !i.columnId && i.kind !== "arrow");
+        if (!el || !cards.length) return;
+        const x0 = Math.min(...cards.map((i) => i.x));
+        const y0 = Math.min(...cards.map((i) => i.y));
+        const x1 = Math.max(...cards.map((i) => i.x + i.w));
+        const y1 = Math.max(...cards.map((i) => i.y + (heights.current.get(i.id) ?? 200)));
+        const r = el.getBoundingClientRect();
+        const padL = 110;
+        const pad = 48;
+        const z = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.min((r.width - padL - pad) / (x1 - x0), (r.height - pad * 2) / (y1 - y0), 1.25)));
+        setZoom(z);
+        setPan({ x: padL + (r.width - padL - pad - (x1 - x0) * z) / 2 - x0 * z, y: pad + (r.height - pad * 2 - (y1 - y0) * z) / 2 - y0 * z });
       },
       zoom,
     };
-  }, [zoom, zoomAt, zoomRef]);
+  }, [zoom, zoomAt, zoomRef, items]);
 
   // Wheel pans; Ctrl/Cmd + wheel (and trackpad pinch) zooms at the pointer.
   useEffect(() => {
@@ -164,17 +183,17 @@ export function BoardCanvas({ store, unsorted, onPlacedFromTray, onReturnedToTra
       const id = crypto.randomUUID();
       const base: NewBoardItem = {
         id,
-        kind: tool,
-        x: Math.round(p.x - (tool === "column" ? COLUMN_WIDTH : DEFAULT_CARD_WIDTH) / 2),
+        kind: tool === "swatch" ? "note" : tool,
+        x: Math.round(p.x - (tool === "column" ? COLUMN_WIDTH : tool === "swatch" ? 140 : DEFAULT_CARD_WIDTH) / 2),
         y: Math.round(p.y - 30),
-        w: tool === "column" ? COLUMN_WIDTH : tool === "board" ? 220 : DEFAULT_CARD_WIDTH,
+        w: tool === "column" ? COLUMN_WIDTH : tool === "board" ? 200 : tool === "swatch" ? 140 : DEFAULT_CARD_WIDTH,
         z: nextZ(),
         position: position ?? 0,
         columnId: columnId ?? null,
-        content: tool === "note" ? { text: "" } : tool === "column" ? { title: "Untitled column" } : {},
+        content: tool === "note" ? { text: "" } : tool === "swatch" ? { swatch: "#2a64d8" } : tool === "column" ? { title: "Untitled column" } : {},
       };
       if (tool === "board") {
-        const res = await fetch("/api/boards", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ title: "Untitled board", parentBoardId: boardId }) });
+        const res = await fetch("/api/boards", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ title: "Untitled board", parentBoardId: boardId, placeCard: false }) });
         if (!res.ok) return toast("Couldn't create the board.", "error");
         const { board } = (await res.json()) as { board: { id: string; title: string } };
         base.childBoardId = board.id;
@@ -294,7 +313,7 @@ export function BoardCanvas({ store, unsorted, onPlacedFromTray, onReturnedToTra
       else if (e.key === "-") zoomAt(1 / 1.2);
       else if (e.key === "0") {
         setZoom(1);
-        setPan({ x: 0, y: 0 });
+        setPan(HOME_PAN);
       }
     };
     const up = (e: KeyboardEvent) => e.code === "Space" && setSpaceHeld(false);
@@ -623,13 +642,13 @@ export function BoardCanvas({ store, unsorted, onPlacedFromTray, onReturnedToTra
       {right}
       <DragOverlay dropAnimation={null}>
         {activeTray ? (
-          <div className="w-[200px] overflow-hidden rounded-md border border-border bg-surface shadow-[0_18px_40px_rgba(33,29,24,0.22)]">
+          <div className="w-[200px] overflow-hidden rounded-md border border-border bg-surface shadow-[0_18px_40px_rgba(0,0,0,0.22)]">
             <ReferenceBody reference={activeTray} hovering={false} />
           </div>
         ) : drag?.type === "tool" ? (
-          <div className="rounded-md border border-border-strong bg-surface px-3 py-2 text-sm shadow-[0_12px_30px_rgba(33,29,24,0.18)]">New {drag.id.slice(5)}</div>
+          <div className="rounded-md border border-border-strong bg-surface px-3 py-2 text-sm shadow-[0_12px_30px_rgba(0,0,0,0.18)]">New {drag.id.slice(5)}</div>
         ) : activeColumnChild?.columnId ? (
-          <div style={{ width: COLUMN_WIDTH - 16, transform: `scale(${zoom})`, transformOrigin: "top left" }} className="overflow-hidden rounded-md border border-border bg-surface shadow-[0_18px_40px_rgba(33,29,24,0.22)]">
+          <div style={{ width: COLUMN_WIDTH - 16, transform: `scale(${zoom})`, transformOrigin: "top left" }} className="overflow-hidden rounded-md border border-border bg-surface shadow-[0_18px_40px_rgba(0,0,0,0.22)]">
             <ItemBody item={activeColumnChild} store={store} editing={false} hovering={false} onFinishEdit={() => {}} />
           </div>
         ) : null}
@@ -668,10 +687,11 @@ function CanvasDroppable({
       ref={attach}
       onPointerDown={onPointerDown}
       className="relative h-full w-full overflow-hidden select-none"
+      // A faint dot grid that moves with the board (Milanote-style).
       style={{
         cursor,
-        backgroundImage: "radial-gradient(var(--in-border-strong) 0.8px, transparent 0.8px)",
-        backgroundSize: `${24 * zoom}px ${24 * zoom}px`,
+        backgroundImage: "radial-gradient(var(--in-border-strong) 0.9px, transparent 0.9px)",
+        backgroundSize: `${22 * zoom}px ${22 * zoom}px`,
         backgroundPosition: `${pan.x}px ${pan.y}px`,
       }}
       data-testid="board-canvas"
@@ -718,9 +738,12 @@ function ItemBody({
 }) {
   if (item.kind === "reference") {
     const ref = item.referenceId ? store.references[item.referenceId] : undefined;
-    return <ReferenceBody reference={ref} parentTitle={ref?.parentReferenceId ? undefined : undefined} hovering={hovering} />;
+    return <ReferenceBody reference={ref} hovering={hovering} clean />;
   }
-  if (item.kind === "note") return <NoteBody text={item.content.text ?? ""} editing={editing} onDone={(t) => onFinishEdit(item.id, t === null ? null : { text: t })} />;
+  if (item.kind === "note" && item.content.swatch)
+    return <SwatchBody hex={item.content.swatch} editing={editing} onDone={(hex) => onFinishEdit(item.id, hex === null ? null : { swatch: hex })} />;
+  if (item.kind === "note")
+    return <NoteBody text={item.content.text ?? ""} color={item.content.color} editing={editing} onDone={(t) => onFinishEdit(item.id, t === null ? null : { text: t })} />;
   if (item.kind === "link")
     return (
       <LinkBody
@@ -805,24 +828,24 @@ const CanvasItem = memo(function CanvasItem(p: ItemProps) {
         style={style}
         data-item-id={item.id}
         data-kind="column"
-        className={`rounded-lg border bg-surface-3 p-2 ${columnDrop.isOver ? "border-accent" : "border-border"} ${ring}`}
+        className={`rounded-md bg-surface-4 p-2 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.03)] ${columnDrop.isOver ? "outline-2 outline-accent outline-solid" : ""} ${ring}`}
         onPointerDown={(e) => p.onPointerDown(e, item.id)}
       >
-        <div {...listeners} {...attributes} tabIndex={0} aria-label={`Column ${item.content.title ?? ""}`} className="flex cursor-grab items-center justify-between px-1 pt-0.5 pb-2">
+        <div {...listeners} {...attributes} tabIndex={0} aria-label={`Column ${item.content.title ?? ""}`} className="flex cursor-grab items-center justify-between px-1.5 pt-1 pb-2.5">
           {p.editing ? (
             <ColumnTitleEditor title={item.content.title ?? ""} onDone={(t) => p.onFinishEdit(item.id, t === null ? null : { title: t || "Untitled column" })} />
           ) : (
-            <span className="truncate text-sm font-semibold" onDoubleClick={() => p.onEdit(item.id)} data-testid="column-title">
+            <span className="truncate text-md font-semibold" onDoubleClick={() => p.onEdit(item.id)} data-testid="column-title">
               {item.content.title || "Untitled column"}
             </span>
           )}
-          <span className="text-2xs text-text-faint tabular">{kids.length}</span>
+          <span className="text-xs text-text-faint tabular">{kids.length} {kids.length === 1 ? "card" : "cards"}</span>
         </div>
         <div className="flex min-h-[56px] flex-col gap-2" data-column-body={item.id}>
           {kids.map((k) => (
             <ColumnChild key={k.id} {...p} item={k} selected={p.selectedSet.has(k.id)} editing={p.editingId === k.id} offset={null} />
           ))}
-          {kids.length === 0 && <div className="grid h-14 place-items-center rounded-md border border-dashed border-border-strong text-2xs text-text-faint">Drop cards here</div>}
+          {kids.length === 0 && <div className="grid h-16 place-items-center rounded-sm border border-dashed border-border-strong text-xs text-text-faint">Drag cards here</div>}
         </div>
       </div>
     );
@@ -856,11 +879,30 @@ const CanvasItem = memo(function CanvasItem(p: ItemProps) {
       onMouseLeave={() => setHovering(false)}
       onFocus={() => setHovering(true)}
       onBlur={() => setHovering(false)}
-      className={`group overflow-visible rounded-md border bg-surface shadow-[0_1px_2px_rgba(33,29,24,0.06),0_4px_14px_rgba(33,29,24,0.04)] ${
-        boardDrop.isOver ? "border-accent" : "border-border"
-      } ${ring} ${item.kind === "reference" ? "" : ""}`}
+      className={`group overflow-visible rounded-[3px] ${
+        item.kind === "board" ? "hover:bg-surface/70" : "bg-surface shadow-[0_1px_2px_rgba(0,0,0,0.14),0_2px_8px_rgba(0,0,0,0.05)]"
+      } ${boardDrop.isOver ? "outline-2 outline-accent outline-solid" : ""} ${ring}`}
     >
-      <div className="overflow-hidden rounded-md">
+      {p.selected && p.selectedSet.size === 1 && item.kind === "note" && !item.content.swatch && !p.editing && (
+        <div
+          className="absolute -top-11 left-0 z-10 flex items-center gap-1 rounded-md bg-surface p-1.5 shadow-[0_2px_10px_rgba(0,0,0,0.18)]"
+          role="toolbar"
+          aria-label="Note colour"
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          {NOTE_COLORS.map((c) => (
+            <button
+              key={c}
+              type="button"
+              aria-label={`${c} note`}
+              aria-pressed={(item.content.color ?? "white") === c}
+              onClick={() => p.onFinishEdit(item.id, { color: c })}
+              className={`h-5 w-5 rounded-full border border-black/15 ${NOTE_SWATCH_CLASS[c]} ${(item.content.color ?? "white") === c ? "ring-2 ring-accent ring-offset-1" : ""}`}
+            />
+          ))}
+        </div>
+      )}
+      <div className="overflow-hidden rounded-[3px]">
         <ItemBody item={item} store={p.store} editing={p.editing} hovering={hovering} onFinishEdit={p.onFinishEdit} />
       </div>
       {p.selected && !item.columnId && (
@@ -905,7 +947,7 @@ function ColumnChild(p: ItemProps) {
       }}
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
-      className={`overflow-hidden rounded-md border bg-surface shadow-[0_1px_2px_rgba(33,29,24,0.06)] ${boardDrop.isOver ? "border-accent" : "border-border"} ${ring}`}
+      className={`overflow-hidden rounded-[3px] bg-surface shadow-[0_1px_2px_rgba(0,0,0,0.12)] ${boardDrop.isOver ? "outline-2 outline-accent outline-solid" : ""} ${ring}`}
     >
       <ItemBody item={item} store={p.store} editing={p.editing} hovering={hovering} onFinishEdit={p.onFinishEdit} />
     </div>

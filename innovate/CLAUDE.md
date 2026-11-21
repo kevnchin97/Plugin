@@ -84,11 +84,17 @@ fixtures/        Generated test media (gitignored)
 - **zod on every input**; API errors are `{ error: "readable sentence" }`.
 - **Design tokens** live in `packages/shared/src/tokens.ts`; use Tailwind classes generated from them
   (`bg-surface-2`, `text-text-muted`, `border-border`, `text-accent`, `timecode` utility). No raw hex in components.
-- **Theme (decided after M1, overrides SPEC §2's dark default):** the app defaults to a warm beige
-  light theme; dark is the toggle option. The video player and filmstrip stay near-black in both so
-  footage colour reads true. Boards (M2) take their interaction model from Milanote-style free canvases:
-  cards, columns (= clusters), nested boards, a card toolbar and an Unsorted tray. Borrow patterns,
-  not Milanote's branding or visuals.
+- **Look and feel (decided after M8, overrides SPEC §2's dark default and the earlier beige theme):** Milanote-style.
+  A neutral light theme (light-grey canvas `bg`, white cards, one blue accent; dark is the toggle), editorial serif
+  (`font-serif`, Source Serif 4) for board titles and label notes. The player and filmstrip stay near-black. One slim top
+  bar (`components/shell/AppShell.tsx`): menu drawer (all sections), breadcrumbs, centred title, page actions, search,
+  Ask, help; pages fill it through `ShellSlot` portals ("crumbs", "title", "actions") instead of their own header rows.
+  The app opens on the workspace's **Home board** (`boards.is_home`, `homeBoard()` creates it and adopts any top-level
+  board as a card); new boards are cards on their parent (`createBoardOn`). Boards are free-form: anything anywhere,
+  overlapping (dragging brings a card to the front), media full-bleed with title/range/source on hover, notes in white,
+  yellow or label colours (white serif banners), colour swatch cards, a faint dot grid. Board chrome floats over the
+  canvas (Storyflow-style): a menu bar of colourful tools on the left, zoom/fit/undo/redo + Unsorted at the top right, an
+  Ask bar (opens ⌘K) at the bottom. Borrow patterns from Milanote/Storyflow, never their branding or assets.
 - **Boards (M2):** `board_items` holds every card (reference, note, link, column, board, arrow). Columns are the
   spec's clusters: items with `columnId` stack by `position` and ignore x/y. Board cards own a child board
   (`boards.parentBoardId`). Edits go through `POST /api/boards/:id/ops` ({create, update, delete}) in debounced

@@ -162,7 +162,7 @@ export function SharedBoard({ token, rootBoardId, data, initialFeedback, permiss
                           onKeyDown={(e) => e.key === "Enter" && it.kind === "reference" && it.referenceId && setOpen(it.referenceId)}
                           onMouseEnter={() => setHover(it.id)}
                           onMouseLeave={() => setHover(null)}
-                          className={`overflow-hidden rounded-md border bg-surface shadow-[0_1px_2px_rgba(33,29,24,0.06)] ${open && open === it.referenceId ? "border-accent" : "border-border"} ${it.kind === "reference" ? "cursor-pointer" : ""}`}
+                          className={`overflow-hidden rounded-md border bg-surface shadow-[0_1px_2px_rgba(0,0,0,0.06)] ${open && open === it.referenceId ? "border-accent" : "border-border"} ${it.kind === "reference" ? "cursor-pointer" : ""}`}
                           data-testid="shared-card"
                           data-kind={it.kind}
                         >

@@ -9,9 +9,11 @@ test("signed-out visitors are sent to the login page", async ({ page }) => {
 
 test("magic link signs in, creates a workspace, and signs out", async ({ page }) => {
   await signIn(page);
-  await expect(page.getByRole("heading", { name: "Boards", exact: true })).toBeVisible();
-  await expect(page.getByText("No boards yet.")).toBeVisible();
-  await page.getByRole("button", { name: "Sign out" }).click();
+  // The app opens on the workspace's Home board.
+  await expect(page.getByTestId("board-title")).toHaveText("Home");
+  await expect(page.getByText("An empty board")).toBeVisible();
+  await page.getByRole("button", { name: "Menu" }).click();
+  await page.getByTestId("nav-drawer").getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/login$/);
 });
 

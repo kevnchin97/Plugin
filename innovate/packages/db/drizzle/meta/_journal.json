@@ -71,6 +71,13 @@
       "when": 1795224295304,
       "tag": "0009_agents_text_to_save",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1795289915106,
+      "tag": "0010_home_board",
+      "breakpoints": true
     }
   ]
 }

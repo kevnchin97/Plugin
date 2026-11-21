@@ -1,5 +1,4 @@
 "use client";
-import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import { trimmedDuration } from "@innovate/shared";
 import { ShareDialog } from "@/components/feedback/BoardSocial";
@@ -8,6 +7,7 @@ import type { RefLite } from "@/lib/boards";
 import { download, runJob } from "@/lib/client-jobs";
 import type { Playable, ReelData } from "@/lib/present";
 import { saveLabel, useAutosave } from "@/lib/useAutosave";
+import { ShellSlot } from "@/components/shell/ShellSlot";
 import { MediaPicker } from "./MediaPicker";
 import { reelDuration, ReelPlayer } from "./ReelPlayer";
 
@@ -86,18 +86,17 @@ export function ReelEditor({ data, boards }: { data: ReelData; boards: { id: str
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex h-12 shrink-0 items-center gap-3 border-b border-border px-4">
-        <Link href="/reels" className="text-sm text-text-muted hover:text-text">
-          Reels
-        </Link>
+      <ShellSlot slot="crumbs">
         <span className="text-text-faint">/</span>
-        <input value={fields.title} onChange={(e) => setFields((f) => ({ ...f, title: e.target.value }))} aria-label="Reel title" data-testid="reel-title" className="h-8 min-w-0 flex-1 rounded-md bg-transparent px-1 text-md font-medium hover:bg-surface-2 focus:bg-surface-2 focus:outline-none" />
+        <input value={fields.title} onChange={(e) => setFields((f) => ({ ...f, title: e.target.value }))} aria-label="Reel title" data-testid="reel-title" className="h-8 w-[min(420px,40vw)] min-w-0 rounded-md bg-transparent px-1 text-md font-medium hover:bg-surface-3 focus:bg-surface-3 focus:outline-none" />
         <span className="font-mono text-xs text-text-muted" data-testid="reel-total">
           {fmt(total)}
         </span>
         <span className="text-xs text-text-faint" role="status" data-testid="save-status">
           {saveLabel(status)}
         </span>
+      </ShellSlot>
+      <ShellSlot slot="actions">
         <ShareDialog boardId={reelId} endpoint={`/api/reels/${reelId}/shares`} viewOnly noun="reel" onError={(m) => toast(m, "error")} />
         <button type="button" onClick={renderMp4} disabled={render.busy || !items.length} className="h-8 rounded-md border border-border px-3 text-sm hover:bg-surface-2 disabled:opacity-60">
           {render.busy ? `Rendering ${Math.round(render.progress)}%` : "Render MP4"}
@@ -107,7 +106,7 @@ export function ReelEditor({ data, boards }: { data: ReelData; boards: { id: str
             Download MP4
           </a>
         )}
-      </div>
+      </ShellSlot>
 
       <div className="grid min-h-0 flex-1 grid-cols-[1fr_300px]">
         <div className="flex min-h-0 flex-col overflow-y-auto">

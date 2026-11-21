@@ -23,8 +23,10 @@ test("an export saved to a board links back to its source range", async ({ page 
   await page.keyboard.press("Enter");
   await expect(page.getByText(/to Night Exteriors/)).toBeVisible();
 
+  // Home is a board; every board is a card on it. Double-click opens it.
   await page.goto("/");
-  await page.getByTestId("board-tile").filter({ hasText: "Night Exteriors" }).first().click();
+  await page.locator("[data-item-id][data-kind=board]").filter({ hasText: "Night Exteriors" }).first().dblclick();
+  await expect(page).toHaveURL(/\/boards\/[0-9a-f-]{36}$/);
   const card = page.locator("[data-item-id][data-kind=reference]");
   await expect(card).toHaveCount(1);
   await expect(card).toContainText("00:00:02:00 → 00:00:03:00");
@@ -118,7 +120,7 @@ test("nested boards: open a board card, breadcrumbs, and drop cards into it", as
   await canvas.click({ position: { x: 1100, y: 700 } });
   await dragTo(page, page.locator("[data-kind=note]").first(), boardCard);
   await expect(page.locator("[data-kind=note]")).toHaveCount(0);
-  await expect(boardCard).toContainText("1 item");
+  await expect(boardCard).toContainText("1 card");
 
   await boardCard.dblclick();
   await expect(page).not.toHaveURL(new RegExp(parent));
