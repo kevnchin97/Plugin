@@ -87,7 +87,7 @@ fixtures/        Generated test media (gitignored)
 - **Look and feel (decided after M8, overrides SPEC §2's dark default and the earlier beige theme):** Milanote-style.
   A neutral light theme (light-grey canvas `bg`, white cards, one blue accent; dark is the toggle), editorial serif
   (`font-serif`, Source Serif 4) for board titles and label notes. The player and filmstrip stay near-black. One slim top
-  bar (`components/shell/AppShell.tsx`): menu drawer (all sections), breadcrumbs, centred title, page actions, search,
+  bar (`components/shell/AppShell.tsx`): menu drawer, breadcrumbs, centred title, page actions, search,
   Ask, help; pages fill it through `ShellSlot` portals ("crumbs", "title", "actions") instead of their own header rows.
   The app opens on the workspace's **Home board** (`boards.is_home`, `homeBoard()` creates it and adopts any top-level
   board as a card); new boards are cards on their parent (`createBoardOn`). Boards are free-form: anything anywhere,
@@ -95,6 +95,11 @@ fixtures/        Generated test media (gitignored)
   yellow or label colours (white serif banners), colour swatch cards, a faint dot grid. Board chrome floats over the
   canvas (Storyflow-style): a menu bar of colourful tools on the left, zoom/fit/undo/redo + Unsorted at the top right, an
   Ask bar (opens ⌘K) at the bottom. Borrow patterns from Milanote/Storyflow, never their branding or assets.
+- **Product focus (decided after M8):** Innovate is a Milanote alternative first. The menu is Home, Library, Shot
+  lists, Decks (+ Agents, Settings). The GIF Maker is a board feature, not a section: the board's GIF tool opens
+  `/make?board=<id>`, video cards link "Make GIF" to `/make/<id>?board=<id>`, and with `?board=` the editor saves to that
+  board by default and links back to it. Reels and Portfolio still exist (routes, APIs, tests) but are out of the menu,
+  and agents no longer propose reels. Don't add new top-level sections without the user asking.
 - **Boards (M2):** `board_items` holds every card (reference, note, link, column, board, arrow). Columns are the
   spec's clusters: items with `columnId` stack by `position` and ignore x/y. Board cards own a child board
   (`boards.parentBoardId`). Edits go through `POST /api/boards/:id/ops` ({create, update, delete}) in debounced

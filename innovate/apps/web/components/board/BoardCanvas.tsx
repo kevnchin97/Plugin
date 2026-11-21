@@ -738,7 +738,7 @@ function ItemBody({
 }) {
   if (item.kind === "reference") {
     const ref = item.referenceId ? store.references[item.referenceId] : undefined;
-    return <ReferenceBody reference={ref} hovering={hovering} clean />;
+    return <ReferenceBody reference={ref} hovering={hovering} clean boardId={store.boardId} />;
   }
   if (item.kind === "note" && item.content.swatch)
     return <SwatchBody hex={item.content.swatch} editing={editing} onDone={(hex) => onFinishEdit(item.id, hex === null ? null : { swatch: hex })} />;

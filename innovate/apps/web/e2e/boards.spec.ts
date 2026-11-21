@@ -176,3 +176,35 @@ test("arrows connect two cards and survive a reload", async ({ page }) => {
   await page.reload();
   await expect(page.locator("[data-arrow-id] path").nth(1)).toHaveAttribute("d", /^M /);
 });
+
+test("the GIF tool opens the GIF Maker from a board and saves back to it", async ({ page }) => {
+  await signIn(page);
+  const boardId = await createBoard(page, "Car spots");
+  await page.goto(`/boards/${boardId}`);
+  await page.locator('[data-tool="gif"]').click();
+  await expect(page).toHaveURL(new RegExp(`/make\\?board=${boardId}$`));
+  await page.getByTestId("file-input").setInputFiles(fixture("scenes.mp4"));
+  await expect(page).toHaveURL(new RegExp(`/make/[0-9a-f-]{36}\\?board=${boardId}$`), { timeout: 60_000 });
+  await expect(page.getByTestId("scene").first()).toBeVisible({ timeout: 90_000 });
+  await expect(page.getByTestId("back-to-board")).toHaveText("← Car spots");
+  await expect(page.getByTestId("save-to")).toHaveValue(boardId);
+
+  await page.keyboard.press("]");
+  await page.keyboard.press("i");
+  await page.keyboard.press("Shift+ArrowRight");
+  await page.keyboard.press("o");
+  await page.getByTestId("player").focus();
+  await page.locator("body").click({ position: { x: 5, y: 5 } });
+  const dl = page.waitForEvent("download");
+  await page.keyboard.press("g");
+  await dl;
+  await page.keyboard.press("Enter");
+  await expect(page.getByText(/to Car spots/)).toBeVisible();
+
+  await page.getByTestId("back-to-board").click();
+  await expect(page).toHaveURL(new RegExp(`/boards/${boardId}$`));
+  const card = page.locator("[data-item-id][data-kind=reference]");
+  await expect(card).toHaveCount(1);
+  await card.hover();
+  await expect(card.getByRole("link", { name: "Source" })).toHaveAttribute("href", new RegExp(`&board=${boardId}$`));
+});

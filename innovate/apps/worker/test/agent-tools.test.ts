@@ -23,7 +23,6 @@ describe("agent tools", () => {
       "propose_save_links",
       "propose_export_clips",
       "propose_create_deck",
-      "propose_create_reel",
     ]);
     for (const t of TOOL_PARAMS) {
       expect(t.input_schema.type, t.name).toBe("object");

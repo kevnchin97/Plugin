@@ -41,7 +41,8 @@ function put(url: string, file: File, type: string, onProgress: (f: number) => v
   });
 }
 
-export function Intake() {
+export function Intake({ boardId = null }: { boardId?: string | null }) {
+  const qs = boardId ? `?board=${boardId}` : "";
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
   const [dragging, setDragging] = useState(false);
@@ -65,12 +66,12 @@ export function Intake() {
         await put(uploadUrl, file, type, (progress) => setPhase({ kind: "uploading", name: file.name, progress }));
         setPhase({ kind: "starting" });
         await api(`/api/references/${id}/ingest`);
-        router.push(`/make/${id}`);
+        router.push(`/make/${id}${qs}`);
       } catch (err) {
         setPhase({ kind: "error", message: (err as Error).message });
       }
     },
-    [router],
+    [router, qs],
   );
 
   const submitUrl = useCallback(
@@ -80,12 +81,12 @@ export function Intake() {
       try {
         setPhase({ kind: "starting" });
         const { id } = await api<{ id: string }>("/api/references", { kind: "url", url: trimmed });
-        router.push(`/make/${id}`);
+        router.push(`/make/${id}${qs}`);
       } catch (err) {
         setPhase({ kind: "error", message: (err as Error).message });
       }
     },
-    [router],
+    [router, qs],
   );
 
   // Paste a link or a file anywhere on the page.

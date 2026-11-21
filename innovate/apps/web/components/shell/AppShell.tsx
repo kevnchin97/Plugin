@@ -15,27 +15,31 @@ interface Section {
   icon: string;
   /** One line on what it's for, shown under the label in the menu. */
   hint: string;
-  group: "home" | "make" | "present" | "more";
+  group: "home" | "present" | "more";
 }
 
 const SECTIONS: Section[] = [
   { href: "/", label: "Home", hint: "Your boards: collect and arrange references", group: "home", icon: "M4 11.5 12 5l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5h-5v5H5a1 1 0 0 1-1-1z" },
   { href: "/library", label: "Library", hint: "Everything you've saved, in one place", group: "home", icon: "M5 4h4v16H5zM10.5 4h4v16h-4zM16 5l3.5.9-3.6 14-3.4-.9z" },
-  { href: "/make", label: "GIF Maker", hint: "Cut GIFs, stills and clips from a video", group: "make", icon: "M4 6h16v12H4zM4 9.5h16M8 6v3.5M12 6v3.5M16 6v3.5" },
   { href: "/shotlists", label: "Shot lists", hint: "Plan a shoot, shot by shot", group: "present", icon: "M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01" },
   { href: "/decks", label: "Decks", hint: "Treatments and pitch decks to present", group: "present", icon: "M4 5h16v11H4zM12 16v4M8 20h8" },
-  { href: "/reels", label: "Reels", hint: "A showreel of your best clips", group: "present", icon: "M4 6h16v12H4zM10 9.5v5l4-2.5z" },
-  { href: "/portfolio", label: "Portfolio", hint: "Your public page", group: "present", icon: "M12 4a8 8 0 1 1 0 16 8 8 0 0 1 0-16zM4 12h16M12 4c2.5 2.2 3.5 5 3.5 8s-1 5.8-3.5 8c-2.5-2.2-3.5-5-3.5-8s1-5.8 3.5-8z" },
   { href: "/agents", label: "Agents", hint: "AI helpers (⌘K)", group: "more", icon: "M12 3v3M12 18v3M3 12h3M18 12h3M6 6l2 2M16 16l2 2M18 6l-2 2M8 16l-2 2M12 9a3 3 0 1 1 0 6 3 3 0 0 1 0-6z" },
   { href: "/settings", label: "Settings", hint: "", group: "more", icon: "M12 9a3 3 0 1 1 0 6 3 3 0 0 1 0-6zM12 3l1.8 2.6 3.1-.6.6 3.1L20 10l-1.5 2 1.5 2-2.5 1.9-.6 3.1-3.1-.6L12 21l-1.8-2.6-3.1.6-.6-3.1L4 14l1.5-2L4 10l2.5-1.9.6-3.1 3.1.6z" },
 ];
 const GROUPS: { key: Section["group"]; title: string | null }[] = [
   { key: "home", title: null },
-  { key: "make", title: "Make" },
   { key: "present", title: "Plan and present" },
 ];
-/** Pages reached from elsewhere (the top-bar search) still get a breadcrumb. */
-const CRUMB_ONLY = [{ href: "/search", label: "Search" }];
+/**
+ * Pages reached from elsewhere still get a breadcrumb: search, and the GIF Maker (opened from a
+ * board), reels and the portfolio (kept, but not part of the board-first app).
+ */
+const CRUMB_ONLY = [
+  { href: "/search", label: "Search" },
+  { href: "/make", label: "GIF Maker" },
+  { href: "/reels", label: "Reels" },
+  { href: "/portfolio", label: "Portfolio" },
+];
 
 const Icon = ({ d, size = 18 }: { d: string; size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

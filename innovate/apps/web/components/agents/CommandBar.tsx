@@ -9,7 +9,7 @@ const EXAMPLES = [
   "Pull GIFs of every whip pan in this link: ",
   "Build a moodboard from my last three uploads",
   "Draft a treatment deck from Winter Ad",
-  "Assemble a 60-second reel of my car work",
+  "Cut GIFs of the best moments in my last upload",
 ];
 
 /**

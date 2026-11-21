@@ -60,10 +60,13 @@ export function Editor({
   initial,
   initialMarks,
   boards = [],
+  fromBoard = null,
 }: {
   initial: ReferenceDTO;
   initialMarks?: { inFrame: number | null; outFrame: number | null };
   boards?: { id: string; title: string }[];
+  /** Opened from a board: exports save there by default, and the top bar links back. */
+  fromBoard?: { id: string; title: string; href: string } | null;
 }) {
   const [ref, setRef] = useState(initial);
   const toast = useToast();
@@ -80,7 +83,7 @@ export function Editor({
 
   const [inMark, setInMark] = useState<number | null>(initialMarks?.inFrame ?? null);
   const [outMark, setOutMark] = useState<number | null>(initialMarks?.outFrame ?? null);
-  const [saveTo, setSaveTo] = useState<string>("");
+  const [saveTo, setSaveTo] = useState<string>(fromBoard?.id ?? "");
   const [prefs, setPrefs] = useState(() => (typeof window === "undefined" ? { gif: DEFAULT_GIF_OPTIONS, stillFormat: "png" as const, autoDownload: true } : loadPrefs()));
   const [exports, setExports] = useState<JobDTO[]>([]);
   const [muted, setMuted] = useState(false);
@@ -337,9 +340,15 @@ export function Editor({
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-10 shrink-0 items-center gap-3 border-b border-border px-4 text-sm">
-        <Link href="/make" className="text-text-faint hover:text-text" aria-label="Back to GIF Maker">
-          ←
-        </Link>
+        {fromBoard ? (
+          <Link href={fromBoard.href} className="shrink-0 text-text-faint hover:text-text" data-testid="back-to-board">
+            ← {fromBoard.title}
+          </Link>
+        ) : (
+          <Link href="/make" className="text-text-faint hover:text-text" aria-label="Back to GIF Maker">
+            ←
+          </Link>
+        )}
         <h1 className="min-w-0 truncate font-medium" data-testid="ref-title">
           {ref.title}
         </h1>

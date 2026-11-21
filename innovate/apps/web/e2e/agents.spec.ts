@@ -81,7 +81,7 @@ test("Research Agent: Cmd+K brief → Vimeo shortlist with reasons → approve �
   expect(call.model).toBe("claude-opus-5-5");
   expect(call.beta).toContain("server-side-fallback-2026-07-01");
   expect(call.fallbacks).toBe("default");
-  expect(call.tools).toEqual(expect.arrayContaining(["search_vimeo", "search_library", "propose_save_links", "propose_create_deck", "propose_create_reel"]));
+  expect(call.tools).toEqual(expect.arrayContaining(["search_vimeo", "search_library", "propose_save_links", "propose_create_deck"]));
 });
 
 test("general agents: moodboard from the last three uploads, and GIFs of the fastest moves in a link", async ({ page }) => {

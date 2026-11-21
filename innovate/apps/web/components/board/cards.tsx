@@ -12,7 +12,20 @@ export function aspectOf(ref: RefLite | undefined) {
   return ref?.width && ref?.height ? ref.width / ref.height : 16 / 9;
 }
 
-export function ReferenceBody({ reference, parentTitle, hovering, clean = false }: { reference: RefLite | undefined; parentTitle?: string; hovering: boolean; clean?: boolean }) {
+export function ReferenceBody({
+  reference,
+  parentTitle,
+  hovering,
+  clean = false,
+  boardId,
+}: {
+  reference: RefLite | undefined;
+  parentTitle?: string;
+  hovering: boolean;
+  clean?: boolean;
+  /** The board the card is on: the GIF Maker opened from it saves back to it. */
+  boardId?: string;
+}) {
   if (!reference)
     return <div className="grid aspect-video place-items-center text-xs text-text-faint">Missing reference</div>;
   if (reference.type === "link") return <LinkReference reference={reference} />;
@@ -24,14 +37,15 @@ export function ReferenceBody({ reference, parentTitle, hovering, clean = false 
         ? tc(reference.sourceIn)
         : `${tc(reference.sourceIn)} → ${tc(reference.sourceOut! - fps.den / fps.num)}`
       : null;
+  const back = boardId ? `board=${boardId}` : "";
   const editorHref =
     reference.type === "video"
-      ? `/make/${reference.id}`
+      ? `/make/${reference.id}${back ? `?${back}` : ""}`
       : reference.parentReferenceId && fps && reference.sourceIn !== null
         ? `/make/${reference.parentReferenceId}?in=${secondsToFrame(reference.sourceIn, fps)}&out=${Math.max(
             secondsToFrame(reference.sourceIn, fps),
             secondsToFrame(reference.sourceOut ?? reference.sourceIn, fps) - 1,
-          )}`
+          )}${back ? `&${back}` : ""}`
         : null;
   if (clean)
     // On a board (Milanote-style): the image itself, full-bleed. Title, range and source show on hover.
@@ -48,7 +62,7 @@ export function ReferenceBody({ reference, parentTitle, hovering, clean = false 
             <span>{[TYPE_LABEL[reference.type], range].filter(Boolean).join(" · ")}</span>
             {editorHref && (
               <Link href={editorHref} onPointerDown={(e) => e.stopPropagation()} className="font-medium text-white underline-offset-2 hover:underline" title={reference.type === "video" ? "Open in the GIF Maker" : "Open the source at this range"}>
-                {reference.type === "video" ? "Open" : "Source"}
+                {reference.type === "video" ? "Make GIF" : "Source"}
               </Link>
             )}
           </div>
@@ -86,7 +100,7 @@ export function ReferenceBody({ reference, parentTitle, hovering, clean = false 
               className="ml-1.5 text-accent hover:underline"
               title={reference.type === "video" ? "Open in the GIF Maker" : "Open the source at this range"}
             >
-              {reference.type === "video" ? "Open" : "Source"}
+              {reference.type === "video" ? "Make GIF" : "Source"}
             </Link>
           )}
         </div>

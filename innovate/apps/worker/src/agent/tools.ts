@@ -10,7 +10,7 @@ import { db, redisConnection } from "../context";
 /**
  * The agent's tools (SPEC §5.8): Innovate's own operations. Read tools answer from the
  * workspace; `ingest_link` adds a video to the library (what Paste-a-link does); every change to
- * boards, decks or reels is a `propose_*` tool that only records an action for the user to approve.
+ * boards or decks is a `propose_*` tool that only records an action for the user to approve.
  */
 export interface ToolContext {
   workspaceId: string;
@@ -209,7 +209,6 @@ export const TOOLS = [
   propose("save_links", "Propose saving web links (e.g. a Vimeo shortlist) as references on a board, each with a one-line reason the user will see."),
   propose("export_clips", "Propose exporting GIFs or clips from frame ranges of a video (use get_scenes for exact frames) onto a board."),
   propose("create_deck", "Propose a treatment or pitch deck. Layouts: title, text, media, media-text, grid. Use referenceIds for media."),
-  propose("create_reel", "Propose a reel: videos and clips in order with trims in seconds (null = whole clip), optional title and end cards."),
 ];
 
 const byName = new Map(TOOLS.map((t) => [t.name, t as ToolDef<z.ZodType>]));

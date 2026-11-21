@@ -1,7 +1,7 @@
 "use client";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityList, FeedbackContext, Presence, ShareDialog } from "@/components/feedback/BoardSocial";
 import { FeedbackPanel } from "@/components/feedback/FeedbackPanel";
@@ -23,7 +23,7 @@ const Glyph = ({ d, size = 18 }: { d: string; size?: number }) => (
 );
 const HomeIcon = () => <Glyph d="M4 11.5 12 5l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5h-5v5H5a1 1 0 0 1-1-1z" size={16} />;
 
-const TOOLS: { tool: Tool | "arrow" | "upload"; label: string; icon: string; hint: string; tile: string }[] = [
+const TOOLS: { tool: Tool | "arrow" | "upload" | "gif"; label: string; icon: string; hint: string; tile: string }[] = [
   { tool: "note", label: "Note", icon: "M6 4h12a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM8.5 9h7M8.5 12.5h7M8.5 16h4", hint: "N", tile: "bg-board-4" },
   { tool: "link", label: "Link", icon: "M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1", hint: "", tile: "bg-board-1" },
   { tool: "column", label: "Column", icon: "M8 3.5h8a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2zM8.5 8h7M8.5 11.5h7M8.5 15h7", hint: "", tile: "bg-board-2" },
@@ -31,10 +31,11 @@ const TOOLS: { tool: Tool | "arrow" | "upload"; label: string; icon: string; hin
   { tool: "swatch", label: "Colour", icon: "M12 3.5c3 3.6 6 7 6 10.5a6 6 0 0 1-12 0c0-3.5 3-6.9 6-10.5z", hint: "", tile: "bg-board-5" },
   { tool: "arrow", label: "Arrow", icon: "M5 19 19 5M19 5h-6M19 5v6", hint: "", tile: "bg-board-6" },
   { tool: "upload", label: "Upload", icon: "M12 16V4M7 9l5-5 5 5M5 20h14", hint: "", tile: "bg-label-slate" },
+  { tool: "gif", label: "GIF", icon: "M4 6h16v12H4zM4 9.5h16M8 6v3.5M12 6v3.5M16 6v3.5", hint: "Cut a GIF from a video", tile: "bg-label-red" },
 ];
 
 function ToolButton({ t, active, onClick }: { t: (typeof TOOLS)[number]; active: boolean; onClick(): void }) {
-  const draggable = t.tool !== "arrow" && t.tool !== "upload";
+  const draggable = t.tool !== "arrow" && t.tool !== "upload" && t.tool !== "gif";
   const { attributes, listeners, setNodeRef } = useDraggable({ id: `tool:${t.tool}`, data: { type: "tool", tool: t.tool }, disabled: !draggable });
   return (
     <button
@@ -116,6 +117,7 @@ export function BoardView({ initial, initialUnsorted, selfId }: { initial: Board
   // Unsorted lives at the bottom of the tool rail and opens as a panel beside it (closed by default).
   const [trayOpen, setTrayOpen] = useState(false);
   const [arrowMode, setArrowMode] = useState(false);
+  const router = useRouter();
   const [zoom, setZoom] = useState(1);
   const createRef = useRef<((tool: Tool, at?: { x: number; y: number }) => void) | null>(null);
   const zoomRef = useRef<{ zoomBy(f: number): void; reset(): void; fit(): void; zoom: number } | null>(null);
@@ -346,6 +348,7 @@ export function BoardView({ initial, initialUnsorted, selfId }: { initial: Board
                       onClick={() => {
                         if (t.tool === "arrow") setArrowMode(!arrowMode);
                         else if (t.tool === "upload") fileInput.current?.click();
+                        else if (t.tool === "gif") router.push(`/make?board=${store.boardId}`);
                         else createRef.current?.(t.tool);
                       }}
                     />

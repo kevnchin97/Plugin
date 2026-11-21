@@ -40,7 +40,7 @@ export function BoardGrid({ store }: { store: BoardStore }) {
 
   const body = (it: Item) =>
     it.kind === "reference" ? (
-      <ReferenceBody reference={it.referenceId ? store.references[it.referenceId] : undefined} hovering={hover === it.id} />
+      <ReferenceBody reference={it.referenceId ? store.references[it.referenceId] : undefined} hovering={hover === it.id} boardId={store.boardId} />
     ) : it.kind === "note" ? (
       <NoteBody text={it.content.text ?? ""} editing={false} onDone={() => {}} />
     ) : it.kind === "link" ? (

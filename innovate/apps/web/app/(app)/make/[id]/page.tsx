@@ -12,7 +12,7 @@ export default async function EditorPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ in?: string; out?: string }>;
+  searchParams: Promise<{ in?: string; out?: string; board?: string }>;
 }) {
   const ctx = await requirePageSession();
   const id = z.uuid().safeParse((await params).id);
@@ -22,11 +22,17 @@ export default async function EditorPage({
   const sp = await searchParams;
   const mark = (v?: string) => (v !== undefined && /^\d+$/.test(v) ? Number(v) : null);
   const boardsList = await listBoards(ctx.workspaceId, ctx.userId);
+  const fromBoard = z.uuid().safeParse(sp.board);
+  const board = fromBoard.success ? boardsList.all.find((b) => b.id === fromBoard.data) : undefined;
   return (
     <Editor
       initial={await serializeReference(ref)}
       initialMarks={{ inFrame: mark(sp.in), outFrame: mark(sp.out) }}
-      boards={boardsList.recent.concat(boardsList.top.filter((b) => !boardsList.recent.some((r) => r.id === b.id))).map((b) => ({ id: b.id, title: b.title }))}
+      fromBoard={board ? { id: board.id, title: board.isHome ? "Home" : board.title, href: board.isHome ? "/" : `/boards/${board.id}` } : null}
+      boards={[
+        ...(board ? [{ id: board.id, title: board.isHome ? "Home" : board.title }] : []),
+        ...boardsList.recent.concat(boardsList.top.filter((b) => !boardsList.recent.some((r) => r.id === b.id))).filter((b) => b.id !== board?.id).map((b) => ({ id: b.id, title: b.title })),
+      ]}
     />
   );
 }
