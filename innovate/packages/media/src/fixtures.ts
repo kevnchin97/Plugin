@@ -52,7 +52,10 @@ export const VFR_FIXTURE = { file: "vfr.mp4", nominalFps: 30, captureFrames: 150
 /** portrait.png: a 600x900 still (2:3) for native-aspect checks in grids. */
 export const PORTRAIT_FIXTURE = { file: "portrait.png", width: 600, height: 900 };
 
-/** demo.mp4: a ~16 s "film" of generated shots with grain and a chord pad, for the seed and screenshots. */
+/**
+ * demo.mp4: a ~16 s "film" of generated shots with grain and a chord pad, for the seed and screenshots.
+ * Every random source (gradients, life, noise) has a fixed seed so the film is identical on every machine.
+ */
 export const DEMO_FIXTURE = { file: "demo.mp4" };
 
 /** short.webm: 2 s VP9 + Opus, to cover the WebM upload path. */
@@ -165,18 +168,18 @@ async function makeDemo(out: string) {
   const R = 24;
   const shots = [
     // Dusk: slow warm gradient drift.
-    `gradients=s=${W}x${H}:r=${R}:c0=0x081226:c1=0x2a1a4a:c2=0xe0783a:c3=0xffc46b:n=4:x0=0:y0=0:x1=${W}:y1=${H}:speed=0.012:type=radial,trim=duration=3.5`,
+    `gradients=s=${W}x${H}:r=${R}:c0=0x081226:c1=0x2a1a4a:c2=0xe0783a:c3=0xffc46b:n=4:x0=0:y0=0:x1=${W}:y1=${H}:speed=0.012:type=radial:seed=11,trim=duration=3.5`,
     // Neon: fast cool sweep.
-    `gradients=s=${W}x${H}:r=${R}:c0=0x05060f:c1=0x0b5a73:c2=0xff2e88:n=3:speed=0.05:type=linear,trim=duration=3`,
+    `gradients=s=${W}x${H}:r=${R}:c0=0x05060f:c1=0x0b5a73:c2=0xff2e88:n=3:speed=0.05:type=linear:seed=12,trim=duration=3`,
     // Cells: game of life, upscaled with hard pixels, amber on night.
-    `life=s=320x180:r=${R}:mold=12:ratio=0.12:death_color=#0b0b16:life_color=#ffb35c:mold_color=#3a1f5c,scale=${W}:${H}:flags=neighbor,trim=duration=3`,
+    `life=s=320x180:r=${R}:seed=13:mold=12:ratio=0.12:death_color=#0b0b16:life_color=#ffb35c:mold_color=#3a1f5c,scale=${W}:${H}:flags=neighbor,trim=duration=3`,
     // Push-in: mandelbrot zoom, desaturated and graded teal.
     `mandelbrot=s=${W}x${H}:r=${R}:inner=convergence:outer=normalized_iteration_count,hue=s=0.35,colorbalance=bs=0.22:rh=-0.08:bh=0.05,trim=duration=3.5`,
     // Ember: dark radial with flicker.
-    `gradients=s=${W}x${H}:r=${R}:c0=0x020202:c1=0x3b0d05:c2=0xb3361a:n=3:speed=0.03:type=circular,trim=duration=3`,
+    `gradients=s=${W}x${H}:r=${R}:c0=0x020202:c1=0x3b0d05:c2=0xb3361a:n=3:speed=0.03:type=circular:seed=14,trim=duration=3`,
   ];
   const graph = shots.map((s, i) => `${s},format=yuv420p,setsar=1,settb=1/${R}[s${i}]`).join(";");
-  const concat = shots.map((_, i) => `[s${i}]`).join("") + `concat=n=${shots.length}:v=1:a=0,noise=alls=10:allf=t,vignette=PI/4.5[v]`;
+  const concat = shots.map((_, i) => `[s${i}]`).join("") + `concat=n=${shots.length}:v=1:a=0,noise=alls=10:allf=t:all_seed=15,vignette=PI/4.5[v]`;
   const total = 16;
   const pad =
     "aevalsrc='0.08*sin(2*PI*110*t)*(0.6+0.4*sin(2*PI*0.25*t))+0.05*sin(2*PI*164.81*t)+0.04*sin(2*PI*220*t)+0.03*sin(2*PI*277.18*t)*(0.5+0.5*sin(2*PI*0.5*t))'" +
@@ -242,7 +245,7 @@ export async function ensureFixtures(opts: { force?: boolean; only?: string[]; l
           "-f",
           "lavfi",
           "-i",
-          `gradients=s=${PORTRAIT_FIXTURE.width}x${PORTRAIT_FIXTURE.height}:c0=0x1d2b53:c1=0xf2a641:n=2:d=1`,
+          `gradients=s=${PORTRAIT_FIXTURE.width}x${PORTRAIT_FIXTURE.height}:c0=0x1d2b53:c1=0xf2a641:n=2:d=1:seed=16`,
           "-frames:v",
           "1",
           o,

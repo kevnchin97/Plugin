@@ -12,8 +12,9 @@ import { localOriginal } from "../originals";
 
 /** Keyframes per video: scene thumbnails, evenly thinned to this many. */
 const MAX_KEYFRAMES = 48;
-/** Fewer scenes than this and we also sample frames evenly (a one-shot video still gets coverage). */
-const MIN_KEYFRAMES = 4;
+/** Plus a frame every SAMPLE_SECONDS through the video (spaced out further for long videos, at most MAX_SAMPLES). */
+const SAMPLE_SECONDS = 2;
+const MAX_SAMPLES = 48;
 
 interface Frame {
   source: string;
@@ -72,15 +73,20 @@ export async function runEmbed(job: Job<EmbedRefJobData>) {
           frames.push({ source: `t:${t.toFixed(2)}`, time: t, frameKey: null, file: await toJpeg(src, join(work, `f${i}.jpg`), t) });
       }
     } else if (ref.type === "video") {
+      // Scene keyframes (the thumbnail a third of the way into each scene)…
       const rows = await db.select().from(scenes).where(eq(scenes.referenceId, referenceId)).orderBy(asc(scenes.index));
       for (const s of thin(rows.filter((r) => r.thumbnailKey), MAX_KEYFRAMES))
-        frames.push({ source: `scene:${s.index}`, time: s.start, frameKey: s.thumbnailKey, file: await fetchKey(s.thumbnailKey!, `scene${s.index}`) });
+        frames.push({ source: `scene:${s.index}`, time: s.start + (s.end - s.start) / 3, frameKey: s.thumbnailKey, file: await fetchKey(s.thumbnailKey!, `scene${s.index}`) });
+      // …plus frames sampled through the whole video, so a long shot (or two shots merged by a
+      // missed cut) is still searchable everywhere, not only at its one scene thumbnail.
       const d = ref.duration ?? 0;
       const sourceKey = ref.proxyKey ?? ref.masterKey ?? ref.originalKey;
-      if (frames.length < MIN_KEYFRAMES && d > 0 && sourceKey) {
+      if (d > 0 && sourceKey) {
         const src = await localOriginal(referenceId, sourceKey);
-        for (let i = 0; i < MIN_KEYFRAMES; i++) {
-          const t = (d * (i + 0.5)) / MIN_KEYFRAMES;
+        const every = Math.max(SAMPLE_SECONDS, d / MAX_SAMPLES);
+        const times: number[] = [];
+        for (let t = every / 2; t < d; t += every) if (!frames.some((f) => f.time !== null && Math.abs(f.time - t) < every / 3)) times.push(t);
+        for (const [i, t] of times.entries()) {
           const file = await toJpeg(src, join(work, `sample${i}.jpg`), t);
           const key = `ws/${workspaceId}/ref/${referenceId}/keyframes/${i}.jpg`;
           await storage.uploadFile(key, file, "image/jpeg");
