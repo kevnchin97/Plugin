@@ -7,6 +7,8 @@ import { runExport } from "./jobs/export";
 import { sendDigests } from "./jobs/digest";
 import { runImport } from "./jobs/import";
 import { runPdf } from "./jobs/pdf";
+import { runDeckPdf } from "./jobs/deck-pdf";
+import { runReelRender } from "./jobs/reel-render";
 import { runIngest } from "./jobs/ingest";
 import { runEmbed, sweepUnembedded } from "./jobs/embed";
 import { embedTexts, warmClip } from "./clip";
@@ -20,6 +22,13 @@ function readable(err: unknown): string {
 
 async function handle(job: Job<MediaJobData>) {
   if (job.data.type === "digest") return sendDigests();
+  if (job.data.type === "deck-pdf" || job.data.type === "reel-render") {
+    await db.update(mediaJobs).set({ status: "active", attempts: job.attemptsMade + 1, error: null }).where(eq(mediaJobs.id, job.data.jobId));
+    const started = Date.now();
+    const out = job.data.type === "deck-pdf" ? await runDeckPdf(job as Job<never>) : await runReelRender(job as Job<never>);
+    console.log(`[worker] ${job.data.type} ${job.data.jobId} done in ${((Date.now() - started) / 1000).toFixed(1)}s`);
+    return out;
+  }
   if (job.data.type === "pdf") {
     await db.update(mediaJobs).set({ status: "active", attempts: job.attemptsMade + 1 }).where(eq(mediaJobs.id, job.data.jobId));
     return runPdf(job as Job<never>);

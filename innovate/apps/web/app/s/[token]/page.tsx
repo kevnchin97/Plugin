@@ -5,13 +5,16 @@ import { rateLimit } from "@innovate/shared/realtime";
 import { SharedBoard } from "@/components/share/SharedBoard";
 import { SharedShotList } from "@/components/share/SharedShotList";
 import { loadShotList } from "@/lib/shotlists";
+import { DeckPresenter } from "@/components/present/DeckPresenter";
+import { SharedReel } from "@/components/share/SharedReel";
+import { loadDeck, loadReel } from "@/lib/present";
 import { SharePassword } from "@/components/share/SharePassword";
 import { Logo } from "@/components/ui/Logo";
 import { ToastProvider } from "@/components/ui/Toasts";
 import { loadBoard } from "@/lib/boards";
 import { boardInShare, loadFeedback, resolveShare } from "@/lib/feedback";
 
-export const metadata: Metadata = { title: "Shared board", robots: { index: false } };
+export const metadata: Metadata = { title: "Shared", robots: { index: false } };
 
 function Message({ title, body }: { title: string; body: string }) {
   return (
@@ -48,6 +51,16 @@ export default async function SharePage({ params, searchParams }: { params: Prom
     const data = await loadShotList(share.link.workspaceId, share.link.targetId).catch(() => null);
     if (!data) return <Message title="Link not found" body="This shot list was deleted." />;
     return <SharedShotList token={token} data={data} />;
+  }
+  if (share.link.targetType === "deck") {
+    const data = await loadDeck(share.link.workspaceId, share.link.targetId).catch(() => null);
+    if (!data) return <Message title="Link not found" body="This deck was deleted." />;
+    return <DeckPresenter data={data} />;
+  }
+  if (share.link.targetType === "reel") {
+    const data = await loadReel(share.link.workspaceId, share.link.targetId).catch(() => null);
+    if (!data) return <Message title="Link not found" body="This reel was deleted." />;
+    return <SharedReel data={data} />;
   }
   if (share.link.targetType !== "board") return <Message title="Not available yet" body="This kind of link isn't supported here." />;
 

@@ -191,7 +191,7 @@ export const mediaJobs = pgTable(
     workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
     /** Null for jobs that aren't about one reference (e.g. a shot-list PDF). */
     referenceId: uuid("reference_id").references(() => references.id, { onDelete: "cascade" }),
-    type: text("type").$type<"ingest" | "export" | "import" | "pdf">().notNull(),
+    type: text("type").$type<"ingest" | "export" | "import" | "pdf" | "deck-pdf" | "reel-render">().notNull(),
     /** Same request => same key => same job and output (idempotency). */
     idempotencyKey: text("idempotency_key").notNull(),
     status: text("status").$type<JobStatus>().notNull().default("queued"),
@@ -499,3 +499,118 @@ export type Embedding = typeof embeddings.$inferSelect;
 
 /** The text the keyword fallback searches; matches the `refs_fts_idx` expression index (0007_search.sql). */
 export const refSearchDocument = sql`to_tsvector('english', coalesce(${references.title}, '') || ' ' || coalesce(${references.notes}, '') || ' ' || coalesce(${references.autoDescription}, '') || ' ' || coalesce(${references.sourcePlatform}, ''))`;
+
+/* ---------- Decks, reels and portfolio (M7) ---------- */
+
+export const slideLayoutEnum = pgEnum("slide_layout", ["title", "text", "media", "media-text", "grid"]);
+
+/** A treatment / pitch deck. Slides are saved as a whole with the deck (PUT /api/decks/:id). */
+export const decks = pgTable(
+  "decks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+    title: text("title").notNull().default("Untitled deck"),
+    /** Board the deck was drafted from (its references show first in the media panel). */
+    boardId: uuid("board_id").references(() => boards.id, { onDelete: "set null" }),
+    /** "paper" (warm light) or "night" (dark): maps to the app's light/dark tokens inside slides. */
+    theme: text("theme").$type<"paper" | "night">().notNull().default("paper"),
+    createdBy: text("created_by").references(() => users.id, { onDelete: "set null" }),
+    ...timestamps,
+  },
+  (t) => [index("decks_workspace_idx").on(t.workspaceId, t.updatedAt)],
+);
+
+export const slides = pgTable(
+  "slides",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+    deckId: uuid("deck_id").notNull().references(() => decks.id, { onDelete: "cascade" }),
+    position: real("position").notNull().default(0),
+    layout: slideLayoutEnum("layout").notNull().default("text"),
+    /** Treatment template section ("logline", "tone", …); empty for free slides. */
+    section: text("section").notNull().default(""),
+    heading: text("heading").notNull().default(""),
+    body: text("body").notNull().default(""),
+    /** Ordered reference ids shown on the slide (GIFs and clips play). */
+    mediaIds: jsonb("media_ids").$type<string[]>().notNull().default([]),
+    notes: text("notes").notNull().default(""),
+    ...timestamps,
+  },
+  (t) => [index("slides_deck_idx").on(t.deckId, t.position)],
+);
+
+/** A showreel: clips on a sequence with trims, optional title and end cards, optionally rendered to one MP4. */
+export const reels = pgTable(
+  "reels",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+    title: text("title").notNull().default("Untitled reel"),
+    titleCard: text("title_card").notNull().default(""),
+    titleCardSub: text("title_card_sub").notNull().default(""),
+    endCard: text("end_card").notNull().default(""),
+    endCardSub: text("end_card_sub").notNull().default(""),
+    /** Latest MP4 render (worker), with the content hash it was rendered from. */
+    renderKey: text("render_key"),
+    renderHash: text("render_hash"),
+    createdBy: text("created_by").references(() => users.id, { onDelete: "set null" }),
+    ...timestamps,
+  },
+  (t) => [index("reels_workspace_idx").on(t.workspaceId, t.updatedAt)],
+);
+
+export const reelItems = pgTable(
+  "reel_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+    reelId: uuid("reel_id").notNull().references(() => reels.id, { onDelete: "cascade" }),
+    referenceId: uuid("reference_id").notNull().references(() => references.id, { onDelete: "cascade" }),
+    position: real("position").notNull().default(0),
+    /** Trim in seconds within the reference (null = its start / end). */
+    inSec: doublePrecision("in_sec"),
+    outSec: doublePrecision("out_sec"),
+    ...timestamps,
+  },
+  (t) => [index("reel_items_reel_idx").on(t.reelId, t.position)],
+);
+
+/** One public portfolio page per workspace, at /p/<slug>. */
+export const portfolios = pgTable("portfolios", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .unique()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  slug: text("slug").notNull().unique(),
+  title: text("title").notNull().default(""),
+  bio: text("bio").notNull().default(""),
+  contactEmail: text("contact_email").notNull().default(""),
+  website: text("website").notNull().default(""),
+  template: text("template").$type<"grid" | "feature" | "list">().notNull().default("grid"),
+  published: boolean("published").notNull().default(false),
+  ...timestamps,
+});
+
+export const portfolioItems = pgTable(
+  "portfolio_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+    portfolioId: uuid("portfolio_id").notNull().references(() => portfolios.id, { onDelete: "cascade" }),
+    referenceId: uuid("reference_id").references(() => references.id, { onDelete: "cascade" }),
+    reelId: uuid("reel_id").references(() => reels.id, { onDelete: "cascade" }),
+    caption: text("caption").notNull().default(""),
+    position: real("position").notNull().default(0),
+  },
+  (t) => [index("portfolio_items_idx").on(t.portfolioId, t.position)],
+);
+
+export type Deck = typeof decks.$inferSelect;
+export type Slide = typeof slides.$inferSelect;
+export type Reel = typeof reels.$inferSelect;
+export type ReelItem = typeof reelItems.$inferSelect;
+export type Portfolio = typeof portfolios.$inferSelect;
+export type PortfolioItem = typeof portfolioItems.$inferSelect;

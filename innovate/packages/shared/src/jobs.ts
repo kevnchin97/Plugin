@@ -75,13 +75,29 @@ export interface PdfJobData {
   shotListId: string;
 }
 
+/** Render a deck to PDF (posters for motion items via ffmpeg). */
+export interface DeckPdfJobData {
+  type: "deck-pdf";
+  jobId: string;
+  workspaceId: string;
+  deckId: string;
+}
+
+/** Render a reel (trims + title/end cards) to one MP4. */
+export interface ReelRenderJobData {
+  type: "reel-render";
+  jobId: string;
+  workspaceId: string;
+  reelId: string;
+}
+
 /** Daily email digest of unsent notifications (repeatable, scheduled by the worker). */
 export interface DigestJobData {
   type: "digest";
   jobId: string;
 }
 
-export type MediaJobData = IngestJobData | ExportJobData | DigestJobData | ImportJobData | PdfJobData;
+export type MediaJobData = IngestJobData | ExportJobData | DigestJobData | ImportJobData | PdfJobData | DeckPdfJobData | ReelRenderJobData;
 
 export interface ExportOutput {
   key: string;

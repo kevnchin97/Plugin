@@ -30,12 +30,17 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               <NavLink href="/">Boards</NavLink>
               <NavLink href="/library">Library</NavLink>
               <NavLink href="/shotlists">Shot lists</NavLink>
+              <NavLink href="/decks">Decks</NavLink>
+              <NavLink href="/reels">Reels</NavLink>
               <NavLink href="/make">GIF Maker</NavLink>
             </nav>
             <div className="ml-auto flex items-center gap-2">
               <Suspense>
                 <HeaderSearch />
               </Suspense>
+              <Link href="/portfolio" className="rounded-md px-2 py-1 text-sm text-text-muted hover:text-text">
+                Portfolio
+              </Link>
               <Link href="/settings" className="rounded-md px-2 py-1 text-sm text-text-muted hover:text-text">
                 Settings
               </Link>

@@ -11,6 +11,8 @@ export const createShareSchema = z.object({
   expiresAt: z.iso.datetime({ offset: true }).or(z.iso.date()).optional(),
 });
 
+export type CreateShare = z.infer<typeof createShareSchema>;
+
 export const guestSchema = z.object({ name: z.string().trim().min(1).max(60) });
 
 export const commentSchema = z.object({

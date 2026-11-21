@@ -23,10 +23,10 @@ export interface MediaLike {
 }
 
 /**
- * A reference's media at its native aspect ratio (never cropped). GIFs and clips stay still
+ * A reference's media at its native aspect ratio (never cropped, unless a deck slide asks to fill with fit="cover"). GIFs and clips stay still
  * until hovered or focused, then play muted; with reduced motion they never autoplay (SPEC §2, §6).
  */
-export function MotionMedia({ item, active, className = "" }: { item: MediaLike; active: boolean; className?: string }) {
+export function MotionMedia({ item, active, className = "", fit = "contain" }: { item: MediaLike; active: boolean; className?: string; fit?: "contain" | "cover" }) {
   const reduced = useReducedMotion();
   const video = useRef<HTMLVideoElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -40,7 +40,7 @@ export function MotionMedia({ item, active, className = "" }: { item: MediaLike;
     else v.pause();
   }, [animate]);
 
-  const cls = `block h-full w-full object-contain ${className}`;
+  const cls = `block h-full w-full ${fit === "cover" ? "object-cover" : "object-contain"} ${className}`;
   if (item.type === "clip" && item.mediaUrl)
     return <video ref={video} src={item.mediaUrl} muted loop playsInline preload="metadata" className={cls} draggable={false} />;
   if (item.type === "gif" && item.mediaUrl) {
