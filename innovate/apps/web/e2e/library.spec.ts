@@ -29,13 +29,13 @@ test("library: 5,000 items are interactive in under a second (SPEC §6)", async 
   const sql = postgres(DATABASE_URL, { max: 1 });
   try {
     const [ws] = await sql`select m.workspace_id from memberships m join users u on u.id = m.user_id where u.email = ${email}`;
-    // 5,000 image references (mixed aspect ratios) pointing at one stored key.
+    // 5,000 image references (mixed aspect ratios) pointing at one stored key; marked embedded so search skips them.
     await sql`
-      insert into refs (workspace_id, type, status, stage, title, original_key, thumbnail_key, width, height, created_at)
+      insert into refs (workspace_id, type, status, stage, title, original_key, thumbnail_key, width, height, created_at, embedded_at)
       select ${ws!.workspace_id}, 'image', 'ready', 'ready', 'Ref ' || g,
              'perf/none.jpg', 'perf/none.jpg',
              case when g % 3 = 0 then 600 else 1600 end, 900,
-             now() - (g || ' seconds')::interval
+             now() - (g || ' seconds')::interval, now()
       from generate_series(1, 5000) g`;
   } finally {
     await sql.end();

@@ -11,7 +11,8 @@
     "./signing": "./src/server/signing.ts",
     "./realtime": "./src/server/realtime.ts",
     "./mailer": "./src/server/mailer.ts",
-    "./adapters": "./src/server/adapters.ts"
+    "./adapters": "./src/server/adapters.ts",
+    "./embed-queue": "./src/server/embed-queue.ts"
   },
   "scripts": {
     "tokens": "tsx scripts/build-tokens.ts",
@@ -20,17 +21,18 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "zod": "4.6.7",
     "@aws-sdk/client-s3": "3.1173.0",
     "@aws-sdk/lib-storage": "3.1173.0",
     "@aws-sdk/s3-request-presigner": "3.1173.0",
+    "bullmq": "5.81.5",
     "ioredis": "5.11.1",
-    "nodemailer": "8.0.11"
+    "nodemailer": "8.0.11",
+    "zod": "4.6.7"
   },
   "devDependencies": {
-    "tsx": "4.23.15",
-    "vitest": "5.1.1",
     "@types/node": "22.20.5",
-    "@types/nodemailer": "8.0.2"
+    "@types/nodemailer": "8.0.2",
+    "tsx": "4.23.15",
+    "vitest": "5.1.1"
   }
 }

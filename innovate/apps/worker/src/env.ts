@@ -16,6 +16,10 @@ const schema = z.object({
   /** Parallel chunks per ingest; defaults to the CPU count. */
   INGEST_PARALLELISM: z.coerce.number().int().min(1).max(64).default(availableParallelism()),
   INGEST_MAX_BYTES: z.coerce.number().int().positive().default(4 * 1024 ** 3),
+  /** transformers.js model cache (CLIP weights, ~150 MB). */
+  MODEL_CACHE_DIR: z.string().default(".data/models"),
+  /** Optional: Claude writes each reference's text description (search keyword fallback + display). */
+  ANTHROPIC_API_KEY: z.string().optional(),
   INGEST_ALLOW_PRIVATE_URLS: z.enum(["true", "false"]).default("false").transform((v) => v === "true"),
 });
 
@@ -30,4 +34,5 @@ if (!parsed.success) {
 export const env = {
   ...parsed.data,
   WORKER_TMP_DIR: resolve(root, parsed.data.WORKER_TMP_DIR),
+  MODEL_CACHE_DIR: resolve(root, parsed.data.MODEL_CACHE_DIR),
 };

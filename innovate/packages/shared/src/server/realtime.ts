@@ -18,6 +18,9 @@ function pub(): Redis {
   return globalThis.__innovateRedisPub;
 }
 
+/** The shared Redis client (also used for small caches, e.g. search query embeddings). */
+export const redisClient = pub;
+
 export const channelFor = (room: string) => `rt:${room}`;
 
 export async function publish(room: string, event: RealtimeEvent): Promise<void> {

@@ -2,7 +2,7 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { createContext, useContext, useEffect, useState } from "react";
 import { Kbd } from "@/components/ui/Kbd";
-import { BOARD_SHORTCUTS, isTypingTarget, SHORTCUTS } from "@/lib/shortcuts";
+import { BOARD_SHORTCUTS, GLOBAL_SHORTCUTS, isTypingTarget, SHORTCUTS } from "@/lib/shortcuts";
 
 const Ctx = createContext<{ open: boolean; setOpen: (v: boolean) => void }>({ open: false, setOpen: () => {} });
 export const useShortcutsOverlay = () => useContext(Ctx);
@@ -62,10 +62,11 @@ export function ShortcutsProvider({ children }: { children: React.ReactNode }) {
                   </ul>
                 </section>
               ))}
-              <section>
-                <h3 className="mb-2 text-2xs font-medium tracking-[0.12em] text-text-faint uppercase">Boards</h3>
+              {([["Anywhere", GLOBAL_SHORTCUTS], ["Boards", BOARD_SHORTCUTS]] as const).map(([title, list]) => (
+              <section key={title}>
+                <h3 className="mb-2 text-2xs font-medium tracking-[0.12em] text-text-faint uppercase">{title}</h3>
                 <ul className="space-y-1.5">
-                  {BOARD_SHORTCUTS.map((s) => (
+                  {list.map((s) => (
                     <li key={s.label} className="flex items-center justify-between gap-4 text-sm">
                       <span className="text-text-muted">{s.label}</span>
                       <span className="flex shrink-0 gap-1">
@@ -77,6 +78,7 @@ export function ShortcutsProvider({ children }: { children: React.ReactNode }) {
                   ))}
                 </ul>
               </section>
+              ))}
             </div>
           </Dialog.Content>
         </Dialog.Portal>

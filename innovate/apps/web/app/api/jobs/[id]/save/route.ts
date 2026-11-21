@@ -1,3 +1,4 @@
+import { queueEmbed } from "@innovate/shared/embed-queue";
 import { NextResponse } from "next/server";
 import { and, eq, mediaJobs, references } from "@innovate/db";
 import { formatTimecode, saveExportSchema } from "@innovate/shared";
@@ -71,5 +72,6 @@ export const POST = route(async (req: Request, { params }: { params: Promise<{ i
       : null;
     return { referenceId: created!.id, alreadySaved: false, boardId: body.boardId ?? null, boardItemId };
   });
+  if (!result.alreadySaved) await queueEmbed(result.referenceId, ctx.workspaceId);
   return NextResponse.json(result, { status: result.alreadySaved ? 200 : 201 });
 });

@@ -50,6 +50,13 @@
       "when": 1795220314867,
       "tag": "0006_shot_lists",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1795221974356,
+      "tag": "0007_search",
+      "breakpoints": true
     }
   ]
 }

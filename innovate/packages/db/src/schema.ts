@@ -144,8 +144,10 @@ export const references = pgTable(
     title: text("title").notNull().default("Untitled"),
     notes: text("notes"),
     autoDescription: text("auto_description"),
-    /** CLIP ViT-B/32 embedding. TODO(M6): populated by the embeddings job. */
+    /** Mean of the reference's CLIP embeddings (rows in `embeddings`), for "more like this". */
     embedding: vector("embedding", { dimensions: 512 }),
+    /** Last time the embed job ran (null = never; the worker's sweep picks these up). */
+    embeddedAt: timestamp("embedded_at", { withTimezone: true }),
     phash: text("phash"),
 
     createdBy: text("created_by").references(() => users.id, { onDelete: "set null" }),
@@ -464,3 +466,36 @@ export const shots = pgTable(
 
 export type ShotList = typeof shotLists.$inferSelect;
 export type Shot = typeof shots.$inferSelect;
+
+/* ---------- Search (M6) ---------- */
+
+/**
+ * CLIP ViT-B/32 image embeddings: one per image, and one per sampled keyframe of a video, clip or
+ * GIF (`time` = seconds into the source). `source` is a stable key ("main", "scene:3", "t:12.5")
+ * so re-embedding overwrites instead of duplicating. Vectors are L2-normalised.
+ */
+export const embeddings = pgTable(
+  "embeddings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+    referenceId: uuid("reference_id").notNull().references(() => references.id, { onDelete: "cascade" }),
+    source: text("source").notNull(),
+    time: doublePrecision("time"),
+    /** Storage key of the frame that was embedded (shown as the hit's thumbnail). */
+    frameKey: text("frame_key"),
+    model: text("model").notNull(),
+    embedding: vector("embedding", { dimensions: 512 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("embeddings_ref_source_uq").on(t.referenceId, t.source),
+    index("embeddings_workspace_idx").on(t.workspaceId),
+    index("embeddings_hnsw_idx").using("hnsw", t.embedding.op("vector_cosine_ops")),
+  ],
+);
+
+export type Embedding = typeof embeddings.$inferSelect;
+
+/** The text the keyword fallback searches; matches the `refs_fts_idx` expression index (0007_search.sql). */
+export const refSearchDocument = sql`to_tsvector('english', coalesce(${references.title}, '') || ' ' || coalesce(${references.notes}, '') || ' ' || coalesce(${references.autoDescription}, '') || ' ' || coalesce(${references.sourcePlatform}, ''))`;

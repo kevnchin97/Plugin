@@ -1,6 +1,8 @@
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { signOut } from "@/auth";
+import { Suspense } from "react";
+import { HeaderSearch } from "@/components/shell/HeaderSearch";
 import { NavLink } from "@/components/shell/NavLink";
 import { ShortcutsButton, ShortcutsProvider } from "@/components/shell/ShortcutsOverlay";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
@@ -31,6 +33,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               <NavLink href="/make">GIF Maker</NavLink>
             </nav>
             <div className="ml-auto flex items-center gap-2">
+              <Suspense>
+                <HeaderSearch />
+              </Suspense>
               <Link href="/settings" className="rounded-md px-2 py-1 text-sm text-text-muted hover:text-text">
                 Settings
               </Link>

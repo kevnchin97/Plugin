@@ -1,3 +1,4 @@
+import { queueEmbed } from "@innovate/shared/embed-queue";
 import { NextResponse } from "next/server";
 import { eq, references } from "@innovate/db";
 import { HttpError, route, uuidParam } from "@/lib/api";
@@ -15,6 +16,7 @@ export const POST = route(async (_req: Request, { params }: { params: Promise<{ 
     const head = await storage().head(ref.originalKey!);
     if (!head) throw new HttpError(409, "The upload hasn't reached storage. Try again.");
     await db().update(references).set({ bytes: head.size, stage: "ready", status: "ready" }).where(eq(references.id, ref.id));
+    await queueEmbed(ref.id, ctx.workspaceId);
     return NextResponse.json({ ready: true });
   }
   if (ref.originalKey && !ref.sourceUrl) {

@@ -39,6 +39,9 @@ jobs:
           for i in $(seq 1 30); do curl -sf http://localhost:9000/minio/health/ready && break; sleep 1; done
       - run: cp .env.example .env && sed -i "s|^AUTH_SECRET=.*|AUTH_SECRET=ci-$(openssl rand -hex 24)|" .env
       - run: pnpm install --frozen-lockfile
+      - name: CLIP model cache (search embeddings)
+        uses: actions/cache@v4
+        with: { path: innovate/.data/models, key: clip-vit-base-patch32-q-v1 }
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm fixtures

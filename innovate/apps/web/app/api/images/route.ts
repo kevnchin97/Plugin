@@ -11,7 +11,7 @@ const EXT = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "im
 /**
  * Start an image/GIF upload: creates the reference and returns a signed PUT URL. Images need
  * no worker processing; POST /api/references/:id/ingest marks them ready once stored.
- * TODO(M6): embeddings and perceptual-hash dedupe run on the worker after upload.
+ * The ingest call queues the CLIP embedding. TODO(post-M8): perceptual-hash dedupe.
  */
 export const POST = route(async (req: Request) => {
   const ctx = await requireApiSession({ write: true });

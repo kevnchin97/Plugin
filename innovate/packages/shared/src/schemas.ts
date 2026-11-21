@@ -98,3 +98,18 @@ export const extSaveSchema = z.object({
 
 export const createTokenSchema = z.object({ name: z.string().trim().min(1).max(80).default("Browser extension") });
 export const notificationPrefSchema = z.object({ mode: z.enum(["immediate", "digest", "off"]) });
+
+/* ---------- Search (M6) ---------- */
+export const REFERENCE_TYPES = ["image", "gif", "clip", "still", "video", "link", "note"] as const;
+/** Where a reference came from, as the search filter groups it. */
+export const SEARCH_SOURCES = ["upload", "web", "vimeo", "export"] as const;
+export const searchQuerySchema = z.object({
+  q: z.string().trim().min(1, "Type what you're looking for.").max(300),
+  types: z.array(z.enum(REFERENCE_TYPES)).max(7).default([]),
+  boardId: z.uuid().optional(),
+  source: z.enum(SEARCH_SOURCES).optional(),
+  from: z.iso.date().optional(),
+  to: z.iso.date().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(60),
+});
+export type SearchQuery = z.infer<typeof searchQuerySchema>;

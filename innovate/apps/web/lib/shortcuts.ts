@@ -57,6 +57,9 @@ export const SHORTCUTS: Shortcut[] = [
   { action: "help", keys: ["?"], label: "Show this list", group: "View" },
 ];
 
+/** App-wide shortcuts (handled in components/shell/HeaderSearch.tsx and the agent bar). */
+export const GLOBAL_SHORTCUTS: { keys: string[]; label: string }[] = [{ keys: ["/"], label: "Search the library" }];
+
 /** Board canvas shortcuts (shown in the ? overlay; handled in components/board/BoardCanvas.tsx). */
 export const BOARD_SHORTCUTS: { keys: string[]; label: string }[] = [
   { keys: ["N"], label: "New note" },

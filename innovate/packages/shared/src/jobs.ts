@@ -2,6 +2,27 @@
 import type { ExportRequest } from "./schemas";
 
 export const MEDIA_QUEUE = "media";
+/** CLIP embeddings run on their own queue (CPU-bound, one model in memory, never behind a long ffmpeg job). */
+export const EMBED_QUEUE = "embed";
+
+/** Embed a reference's images / keyframes (and describe it with Claude when configured). Job id: `embed:<refId>`. */
+export interface EmbedRefJobData {
+  type: "embed";
+  referenceId: string;
+  workspaceId: string;
+}
+/** Embed search text with the CLIP text encoder; the job's return value is the vector. */
+export interface EmbedTextJobData {
+  type: "embed-text";
+  text: string;
+}
+/** Periodic: queue references that were never embedded. */
+export interface EmbedSweepJobData {
+  type: "embed-sweep";
+}
+export type EmbedJobData = EmbedRefJobData | EmbedTextJobData | EmbedSweepJobData;
+export const CLIP_MODEL = "Xenova/clip-vit-base-patch32";
+export const CLIP_DIMENSIONS = 512;
 
 export type JobStatus = "queued" | "active" | "completed" | "failed";
 export const jobStages = [
