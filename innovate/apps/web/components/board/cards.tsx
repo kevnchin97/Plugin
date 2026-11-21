@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { formatTimecode, secondsToFrame } from "@innovate/shared";
+import { Badges } from "@/components/feedback/BoardSocial";
 import { MotionMedia } from "@/components/media/MotionMedia";
 import type { RefLite } from "@/lib/boards";
 
@@ -41,6 +42,7 @@ export function ReferenceBody({ reference, parentTitle, hovering }: { reference:
         {(reference.type === "gif" || reference.type === "clip" || reference.type === "video") && reference.duration ? (
           <span className="absolute right-2 bottom-2 rounded-xs bg-black/70 px-1 font-mono text-2xs text-white/90">{reference.duration.toFixed(1)}s</span>
         ) : null}
+        <Badges referenceId={reference.id} />
         {reference.status !== "ready" && (
           <span className="absolute inset-0 grid place-items-center bg-black/55 text-xs text-white/80">
             {reference.status === "failed" ? "Processing failed" : "Processing…"}

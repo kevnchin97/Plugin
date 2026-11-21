@@ -6,6 +6,7 @@ import { z } from "zod";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
 config({ path: resolve(root, ".env"), quiet: true });
+process.env.INNOVATE_ROOT ??= root;
 
 const schema = z.object({
   DATABASE_URL: z.string().min(1),

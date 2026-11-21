@@ -85,7 +85,7 @@ export async function boardCovers(workspaceId: string, boardIds: string[]) {
   return covers;
 }
 
-export async function loadBoard(workspaceId: string, boardId: string, userId: string) {
+export async function loadBoard(workspaceId: string, boardId: string, userId: string | null) {
   const d = db();
   const board = await getBoard(workspaceId, boardId);
   const items = await d
@@ -105,10 +105,11 @@ export async function loadBoard(workspaceId: string, boardId: string, userId: st
     boardCovers(workspaceId, childIds),
     breadcrumbs(workspaceId, boardId),
   ]);
-  await d
-    .insert(boardVisits)
-    .values({ userId, boardId })
-    .onConflictDoUpdate({ target: [boardVisits.userId, boardVisits.boardId], set: { visitedAt: new Date() } });
+  if (userId)
+    await d
+      .insert(boardVisits)
+      .values({ userId, boardId })
+      .onConflictDoUpdate({ target: [boardVisits.userId, boardVisits.boardId], set: { visitedAt: new Date() } });
   return {
     board: { id: board.id, title: board.title, view: board.view, parentBoardId: board.parentBoardId, updatedAt: board.updatedAt.toISOString() },
     breadcrumbs: trail,

@@ -35,7 +35,13 @@ export interface ExportJobData {
   request: ExportRequest;
 }
 
-export type MediaJobData = IngestJobData | ExportJobData;
+/** Daily email digest of unsent notifications (repeatable, scheduled by the worker). */
+export interface DigestJobData {
+  type: "digest";
+  jobId: string;
+}
+
+export type MediaJobData = IngestJobData | ExportJobData | DigestJobData;
 
 export interface ExportOutput {
   key: string;

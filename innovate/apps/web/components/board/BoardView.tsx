@@ -1,14 +1,19 @@
 "use client";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ActivityList, FeedbackContext, Presence, ShareDialog } from "@/components/feedback/BoardSocial";
+import { FeedbackPanel } from "@/components/feedback/FeedbackPanel";
+import type { ActivityDTO, CommentDTO, FeedbackData } from "@/lib/feedback";
+import { useRealtime } from "@/lib/useRealtime";
 import { useToast } from "@/components/ui/Toasts";
 import type { BoardData, RefLite } from "@/lib/boards";
 import { uploadFiles } from "@/lib/upload";
 import { BoardCanvas, type Tool } from "./BoardCanvas";
 import { BoardGrid } from "./BoardGrid";
 import { ReferenceBody } from "./cards";
-import { useBoard } from "./useBoard";
+import { CLIENT_ID, useBoard } from "./useBoard";
 
 const TOOLS: { tool: Tool | "arrow" | "upload"; label: string; icon: string; hint: string }[] = [
   { tool: "note", label: "Note", icon: "M6 4h12a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM8.5 9h7M8.5 12.5h7M8.5 16h4", hint: "N" },
@@ -95,7 +100,7 @@ function Tray({ items, open, onToggle, onUpload }: { items: RefLite[]; open: boo
   );
 }
 
-export function BoardView({ initial, initialUnsorted }: { initial: BoardData; initialUnsorted: RefLite[] }) {
+export function BoardView({ initial, initialUnsorted, selfId }: { initial: BoardData; initialUnsorted: RefLite[]; selfId: string }) {
   const toast = useToast();
   const onError = useCallback((m: string) => toast(m, "error"), [toast]);
   const store = useBoard(initial, onError);
@@ -109,6 +114,52 @@ export function BoardView({ initial, initialUnsorted }: { initial: BoardData; in
   const createRef = useRef<((tool: Tool, at?: { x: number; y: number }) => void) | null>(null);
   const zoomRef = useRef<{ zoomBy(f: number): void; reset(): void; zoom: number } | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  const search = useSearchParams();
+  const [feedback, setFeedback] = useState<FeedbackData>({ comments: [], favorites: {} });
+  const [activity, setActivity] = useState<ActivityDTO[]>([]);
+  const [panel, setPanel] = useState<null | { kind: "feedback"; refId: string } | { kind: "activity" }>(() => {
+    const ref = search.get("ref");
+    return ref ? { kind: "feedback", refId: ref } : null;
+  });
+
+  useEffect(() => {
+    void fetch(`/api/boards/${store.boardId}/feedback`).then(async (r) => {
+      if (!r.ok) return;
+      const json = (await r.json()) as FeedbackData & { activity: ActivityDTO[] };
+      setFeedback({ comments: json.comments, favorites: json.favorites });
+      setActivity(json.activity);
+    });
+  }, [store.boardId]);
+
+  const upsertComment = useCallback((c: CommentDTO) => setFeedback((f) => ({ ...f, comments: [...f.comments.filter((x) => x.id !== c.id), c] })), []);
+  const { applyRemote } = store;
+  const onEvent = useCallback(
+    (e: { type: string; [k: string]: unknown }) => {
+      if (e.type === "comment" || e.type === "comment-updated") {
+        const c = e.comment as CommentDTO;
+        if (e.type === "comment" && c.authorKind === "guest") toast(`${c.authorName} commented: “${c.body.slice(0, 60)}”`);
+        upsertComment(c);
+      } else if (e.type === "favorite") {
+        const ev = e as unknown as { referenceId: string; count: number; by: string; on: boolean };
+        setFeedback((f) => ({ ...f, favorites: { ...f.favorites, [ev.referenceId]: { count: ev.count, mine: f.favorites[ev.referenceId]?.mine ?? false } } }));
+      } else if (e.type === "activity") {
+        setActivity((a) => [e.entry as ActivityDTO, ...a.filter((x) => x.id !== (e.entry as ActivityDTO).id)].slice(0, 50));
+      } else if (e.type === "ops" && e.clientId !== CLIENT_ID) {
+        void applyRemote(e.ops as Parameters<typeof applyRemote>[0]);
+      }
+    },
+    [applyRemote, toast, upsertComment],
+  );
+  const { members } = useRealtime(`/api/realtime/ticket?boardId=${store.boardId}`, onEvent);
+
+  const counts = useMemo(() => {
+    const out: Record<string, { comments: number; favorites: number }> = {};
+    for (const c of feedback.comments) if (!c.resolvedAt) (out[c.referenceId] ??= { comments: 0, favorites: 0 }).comments++;
+    for (const [ref, f] of Object.entries(feedback.favorites)) (out[ref] ??= { comments: 0, favorites: 0 }).favorites = f.count;
+    return out;
+  }, [feedback]);
+  const feedbackCtx = useMemo(() => ({ counts, open: (refId: string) => setPanel({ kind: "feedback", refId }) }), [counts]);
+  const panelRef = panel?.kind === "feedback" ? store.references[panel.refId] : undefined;
 
   // Keep processing videos fresh until they're ready.
   const processing = Object.values(store.references).some((r) => r.status !== "ready") || unsorted.some((r) => r.status !== "ready");
@@ -146,6 +197,7 @@ export function BoardView({ initial, initialUnsorted }: { initial: BoardData; in
   };
 
   return (
+    <FeedbackContext.Provider value={feedbackCtx}>
     <div className="flex h-full flex-col">
       <div className="flex h-10 shrink-0 items-center gap-2 border-b border-border px-4 text-sm">
         <nav aria-label="Breadcrumbs" className="flex min-w-0 items-center gap-1.5 text-text-faint">
@@ -185,6 +237,16 @@ export function BoardView({ initial, initialUnsorted }: { initial: BoardData; in
           {store.saving === "saving" ? "Saving…" : store.saving === "error" ? "Not saved" : "Saved"}
         </span>
         <div className="ml-auto flex items-center gap-2">
+          <Presence members={members} selfId={selfId} />
+          <button
+            type="button"
+            onClick={() => setPanel((p) => (p?.kind === "activity" ? null : { kind: "activity" }))}
+            aria-pressed={panel?.kind === "activity"}
+            className={`h-7 rounded-md px-2 text-xs ${panel?.kind === "activity" ? "bg-surface-3 text-text" : "text-text-muted hover:bg-surface-3"}`}
+          >
+            Activity
+          </button>
+          <ShareDialog boardId={store.boardId} onError={(m) => toast(m, "error")} />
           <button type="button" onClick={() => store.undo()} disabled={!store.canUndo} className="h-7 rounded-md px-2 text-xs text-text-muted hover:bg-surface-3 disabled:opacity-40" title="Undo (⌘Z)">
             Undo
           </button>
@@ -229,7 +291,42 @@ export function BoardView({ initial, initialUnsorted }: { initial: BoardData; in
                 ))}
               </aside>
             }
-            right={<Tray items={unsorted} open={trayOpen} onToggle={() => setTrayOpen(!trayOpen)} onUpload={() => fileInput.current?.click()} />}
+            right={
+              panel?.kind === "feedback" && panelRef ? (
+                <FeedbackPanel
+                  key={panelRef.id}
+                  reference={panelRef}
+                  comments={feedback.comments.filter((c) => c.referenceId === panelRef.id)}
+                  favorite={feedback.favorites[panelRef.id] ?? { count: 0, mine: false }}
+                  api={{
+                    feedbackUrl: `/api/boards/${store.boardId}/feedback`,
+                    mediaUrl: `/api/references/${panelRef.id}/media`,
+                    resolveUrl: (id) => `/api/comments/${id}`,
+                  }}
+                  canFavorite
+                  canComment
+                  canResolve
+                  onClose={() => setPanel(null)}
+                  onFavorite={(r) => setFeedback((f) => ({ ...f, favorites: { ...f.favorites, [panelRef.id]: { count: r.count, mine: r.on } } }))}
+                  onComment={upsertComment}
+                  onError={(m) => toast(m, "error")}
+                />
+              ) : panel?.kind === "activity" ? (
+                <aside className="flex min-h-0 w-[300px] flex-col border-l border-border bg-surface-2" aria-label="Activity">
+                  <div className="flex h-10 items-center justify-between border-b border-border px-3.5">
+                    <h2 className="text-sm font-semibold">Activity</h2>
+                    <button type="button" onClick={() => setPanel(null)} className="text-xs text-text-faint hover:text-text">
+                      Close
+                    </button>
+                  </div>
+                  <div className="min-h-0 flex-1 overflow-y-auto">
+                    <ActivityList entries={activity} />
+                  </div>
+                </aside>
+              ) : (
+                <Tray items={unsorted} open={trayOpen} onToggle={() => setTrayOpen(!trayOpen)} onUpload={() => fileInput.current?.click()} />
+              )
+            }
             overlay={
               <>
                 <div className="absolute right-3 bottom-3 flex items-center gap-0.5 rounded-md border border-border bg-surface px-1 py-0.5 text-xs text-text-muted shadow-[0_1px_2px_rgba(33,29,24,0.06)]">
@@ -264,5 +361,6 @@ export function BoardView({ initial, initialUnsorted }: { initial: BoardData; in
       </div>
       <input ref={fileInput} type="file" multiple accept="image/*,video/mp4,video/quicktime,video/webm" className="sr-only" aria-label="Upload files" data-testid="board-file-input" onChange={(e) => { void onUpload(e.target.files); e.target.value = ""; }} />
     </div>
+    </FeedbackContext.Provider>
   );
 }

@@ -16,6 +16,7 @@ import {
 import { useRouter } from "next/navigation";
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { COLUMN_WIDTH, DEFAULT_CARD_WIDTH, hostOf, type BoardItemPatch, type NewBoardItem, positionBetween } from "@innovate/shared";
+import { useFeedbackCounts } from "@/components/feedback/BoardSocial";
 import { useToast } from "@/components/ui/Toasts";
 import type { RefLite } from "@/lib/boards";
 import { aspectOf, BoardBody, LinkBody, NoteBody, ReferenceBody } from "./cards";
@@ -746,6 +747,7 @@ const CanvasItem = memo(function CanvasItem(p: ItemProps) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: item.id, data: { type: "item" }, disabled: p.editing });
   const boardDrop = useDroppable({ id: `board:${item.id}`, disabled: item.kind !== "board" });
   const columnDrop = useDroppable({ id: `column:${item.id}`, disabled: item.kind !== "column" });
+  const feedback = useFeedbackCounts();
   const [hovering, setHovering] = useState(false);
   const el = useRef<HTMLDivElement | null>(null);
 
@@ -848,6 +850,7 @@ const CanvasItem = memo(function CanvasItem(p: ItemProps) {
         e.stopPropagation();
         if (item.kind === "board" && item.childBoardId) p.onOpenBoard(item.childBoardId);
         else if (item.kind === "note" || item.kind === "link") p.onEdit(item.id);
+        else if (item.kind === "reference" && item.referenceId) feedback?.open(item.referenceId);
       }}
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}

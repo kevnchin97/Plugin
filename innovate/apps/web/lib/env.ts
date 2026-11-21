@@ -6,7 +6,10 @@ import { z } from "zod";
 
 // One .env for the whole monorepo (innovate/.env). Next only reads apps/web/.env by itself.
 const root = resolve(process.cwd(), "../..");
-if (existsSync(resolve(root, "pnpm-workspace.yaml"))) loadEnvConfig(root, process.env.NODE_ENV !== "production");
+if (existsSync(resolve(root, "pnpm-workspace.yaml"))) {
+  loadEnvConfig(root, process.env.NODE_ENV !== "production");
+  process.env.INNOVATE_ROOT ??= root;
+}
 
 const schema = z.object({
   DATABASE_URL: z.string().min(1),

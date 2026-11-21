@@ -289,3 +289,112 @@ export const boardItems = pgTable(
 
 export type Board = typeof boards.$inferSelect;
 export type BoardItem = typeof boardItems.$inferSelect;
+
+/* ---------- Sharing and feedback (M3) ---------- */
+
+export const sharePermissionEnum = pgEnum("share_permission", ["view", "favorite", "comment"]);
+export const shareTargetEnum = pgEnum("share_target", ["board", "shot_list", "deck", "reel"]);
+
+export const shareLinks = pgTable(
+  "share_links",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+    token: text("token").notNull().unique(),
+    targetType: shareTargetEnum("target_type").notNull(),
+    targetId: uuid("target_id").notNull(),
+    permission: sharePermissionEnum("permission").notNull().default("view"),
+    /** scrypt$N$salt$hash; null = no password. */
+    passwordHash: text("password_hash"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdBy: text("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("share_links_target_idx").on(t.targetType, t.targetId)],
+);
+
+export const guests = pgTable("guests", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  shareLinkId: uuid("share_link_id").notNull().references(() => shareLinks.id, { onDelete: "cascade" }),
+  displayName: text("display_name").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const favorites = pgTable(
+  "favorites",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+    boardId: uuid("board_id").references(() => boards.id, { onDelete: "cascade" }),
+    referenceId: uuid("reference_id").notNull().references(() => references.id, { onDelete: "cascade" }),
+    userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
+    guestId: uuid("guest_id").references(() => guests.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("favorites_user_uq").on(t.referenceId, t.boardId, t.userId),
+    uniqueIndex("favorites_guest_uq").on(t.referenceId, t.boardId, t.guestId),
+    index("favorites_board_idx").on(t.boardId),
+  ],
+);
+
+export const comments = pgTable(
+  "comments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+    /** Where the conversation happens (a board for M3). */
+    boardId: uuid("board_id").references(() => boards.id, { onDelete: "cascade" }),
+    referenceId: uuid("reference_id").notNull().references(() => references.id, { onDelete: "cascade" }),
+    /** Seconds into the reference, for motion items. */
+    timecode: doublePrecision("timecode"),
+    parentId: uuid("parent_id"),
+    body: text("body").notNull(),
+    mentions: jsonb("mentions").$type<string[]>().notNull().default([]),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+    authorUserId: text("author_user_id").references(() => users.id, { onDelete: "set null" }),
+    authorGuestId: uuid("author_guest_id").references(() => guests.id, { onDelete: "set null" }),
+    authorName: text("author_name").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("comments_board_idx").on(t.boardId, t.createdAt), index("comments_ref_idx").on(t.referenceId)],
+);
+
+export const activity = pgTable(
+  "activity",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+    boardId: uuid("board_id").references(() => boards.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(),
+    actorName: text("actor_name").notNull(),
+    payload: jsonb("payload").$type<Record<string, unknown>>().notNull().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("activity_board_idx").on(t.boardId, t.createdAt)],
+);
+
+export const notifyModeEnum = pgEnum("notify_mode", ["immediate", "digest", "off"]);
+
+export const notificationPrefs = pgTable("notification_prefs", {
+  userId: text("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  mode: notifyModeEnum("mode").notNull().default("immediate"),
+});
+
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(),
+    payload: jsonb("payload").$type<{ title: string; body: string; url: string }>().notNull(),
+    emailedAt: timestamp("emailed_at", { withTimezone: true }),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("notifications_user_idx").on(t.userId, t.createdAt)],
+);
+
+export type ShareLink = typeof shareLinks.$inferSelect;
+export type Comment = typeof comments.$inferSelect;

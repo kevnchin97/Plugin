@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { exportFilename, slugify } from "../src/filename";
 import { estimateGifBytes, resolveGifParams } from "../src/gif";
 import { exportRequestSchema } from "../src/schemas";
+import { parseMentions } from "../src/feedback";
 import { renderTokensCss } from "../src/tokens";
 
 describe("filenames", () => {
@@ -45,5 +46,11 @@ describe("design tokens", () => {
   it("tokens.css is up to date (run `pnpm tokens`)", () => {
     const onDisk = readFileSync(new URL("../tokens.css", import.meta.url), "utf8");
     expect(onDisk).toBe(renderTokensCss());
+  });
+});
+
+describe("mentions", () => {
+  it("finds @names, ignores emails", () => {
+    expect(parseMentions("@Ana love this, cc @ben.k and me@example.com @Ana")).toEqual(["Ana", "ben.k"]);
   });
 });

@@ -13,6 +13,9 @@ interface Change {
 
 const empty = (): BoardOps => ({ create: [], update: [], delete: [] });
 
+/** Identifies this tab so it can ignore its own edits when they come back over realtime. */
+export const CLIENT_ID = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : String(Math.random());
+
 /** Apply ops to local state, mirroring lib/boards.ts applyOps (column release, arrow cleanup). */
 function applyLocal(items: Map<string, Item>, ops: BoardOps, boardId: string): Map<string, Item> {
   const next = new Map(items);
@@ -112,7 +115,11 @@ export function useBoard(initial: BoardData, onError: (msg: string) => void) {
     );
     setSaving("saving");
     try {
-      const res = await fetch(`/api/boards/${boardId}/ops`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(merged) });
+      const res = await fetch(`/api/boards/${boardId}/ops`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-client-id": CLIENT_ID },
+        body: JSON.stringify(merged),
+      });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? "Couldn't save the board.");
       setSaving(pending.current.length ? "saving" : "idle");
     } catch (err) {
@@ -183,6 +190,24 @@ export function useBoard(initial: BoardData, onError: (msg: string) => void) {
     return c.label;
   }, [boardId, bump, enqueue]);
 
+  /** Someone else's edit arrived over realtime: apply it without touching undo history. */
+  const applyRemote = useCallback(
+    async (ops: BoardOps) => {
+      setItems((cur) => applyLocal(cur, { ...empty(), ...ops }, boardId));
+      const unknownRefs = ops.create.some((c) => c.referenceId && !references[c.referenceId]);
+      const unknownBoards = ops.create.some((c) => c.kind === "board");
+      if (unknownRefs || unknownBoards) {
+        const res = await fetch(`/api/boards/${boardId}`);
+        if (res.ok) {
+          const data = (await res.json()) as BoardData;
+          setReferences(data.references);
+          setChildBoards(data.childBoards);
+        }
+      }
+    },
+    [boardId, references],
+  );
+
   const maxZ = useMemo(() => Math.max(0, ...[...items.values()].map((i) => i.z)), [items]);
 
   return {
@@ -194,6 +219,7 @@ export function useBoard(initial: BoardData, onError: (msg: string) => void) {
     childBoards,
     setChildBoards,
     commit,
+    applyRemote,
     undo,
     redo,
     canUndo: history.undo > 0,

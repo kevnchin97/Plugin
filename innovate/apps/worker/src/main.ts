@@ -1,9 +1,10 @@
-import { type Job, Worker } from "bullmq";
+import { type Job, Queue, Worker } from "bullmq";
 import { closeDb, eq, mediaJobs, references } from "@innovate/db";
 import { MEDIA_QUEUE, type MediaJobData } from "@innovate/shared";
 import { db, redisConnection, storage } from "./context";
 import { env } from "./env";
 import { runExport } from "./jobs/export";
+import { sendDigests } from "./jobs/digest";
 import { runIngest } from "./jobs/ingest";
 
 function readable(err: unknown): string {
@@ -12,6 +13,7 @@ function readable(err: unknown): string {
 }
 
 async function handle(job: Job<MediaJobData>) {
+  if (job.data.type === "digest") return sendDigests();
   await db
     .update(mediaJobs)
     .set({ status: "active", attempts: job.attemptsMade + 1, error: null })
@@ -24,6 +26,12 @@ async function handle(job: Job<MediaJobData>) {
 
 await storage.ensureBucket();
 
+// Daily digest at 08:00 UTC (upsert is idempotent across restarts and multiple workers).
+const scheduler = new Queue<MediaJobData>(MEDIA_QUEUE, { connection: redisConnection() });
+await scheduler.upsertJobScheduler("daily-digest", { pattern: "0 8 * * *", tz: "UTC" }, { name: "digest", data: { type: "digest", jobId: "daily-digest" } });
+await scheduler.close();
+
+
 const worker = new Worker<MediaJobData>(MEDIA_QUEUE, handle, {
   connection: redisConnection(),
   concurrency: env.WORKER_CONCURRENCY,
@@ -32,7 +40,7 @@ const worker = new Worker<MediaJobData>(MEDIA_QUEUE, handle, {
 });
 
 worker.on("failed", async (job, err) => {
-  if (!job) return;
+  if (!job || job.data.type === "digest") return;
   const final = job.attemptsMade >= (job.opts.attempts ?? 1);
   const message = readable(err);
   console.error(`[worker] ${job.data.type} ${job.data.jobId} attempt ${job.attemptsMade} failed: ${message}`);

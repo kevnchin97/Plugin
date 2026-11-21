@@ -29,6 +29,13 @@
       "when": 1795216943506,
       "tag": "0003_boards",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1795218324881,
+      "tag": "0004_sharing",
+      "breakpoints": true
     }
   ]
 }
