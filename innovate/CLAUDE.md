@@ -1,7 +1,7 @@
 # Innovate: project memory
 
 Visual research workspace for filmmakers. Product + technical spec: `../prompts/innovate-claude-code/SPEC.md`
-(source of truth). Milestones are in SPEC §7; **M0–M7 are done** (scaffold, GIF Maker, boards, sharing, adapters + extension, shot lists, search, decks/reels/portfolio).
+(source of truth). Milestones are in SPEC §7; **M0–M8 are done** (scaffold, GIF Maker, boards, sharing, adapters + extension, shot lists, search, decks/reels/portfolio, agents + text-to-save).
 
 ## Commands (run from `innovate/`)
 
@@ -39,6 +39,9 @@ apps/web         Next.js 16 App Router (UI + API routes). Auth.js v5 in auth.ts.
                       (keys, #slide-N), ReelEditor, ReelPlayer (sequence player), PortfolioEditor/View, MediaPicker
   app/(present)/   chrome-less routes (/decks/[id]/present); app/p/[slug] = public portfolio (no login)
   lib/share-links.ts  view-only share links for shot lists, decks, reels; lib/useAutosave.ts debounced PUT saves
+  lib/agents.ts    agent tasks: create/cancel/retry, approve (apply a proposal, record what it created), finalize
+                   (save agent exports as they finish), undo; components/agents/ CommandBar (⌘K) + AgentPanel
+  lib/phones.ts    text-to-save: phone verification codes, "Inbox from text" board; app/api/twilio/inbound = webhook
   lib/shotlists.ts load/edit shots (publishes to rt room shotlist:<id>), CSV rows, motion link base
   lib/boards.ts    board loading, applyOps (atomic batch edits), placeOnBoard, unsorted, listBoards
   lib/feedback.ts  share links (resolve, unlock, guests), comments, favorites, activity, notifications
@@ -52,7 +55,8 @@ apps/realtime    thin `ws` server: HMAC tickets from the web app, rooms + presen
 apps/worker      BullMQ worker: jobs/ingest.ts (probe, CFR master if VFR, one-decode analysis, thumbnails,
                  GIF density), export.ts, import.ts (images by URL), pdf.ts (shot lists, pdfkit), digest.ts,
                  embed.ts (CLIP keyframes, `embed` queue), deck-pdf.ts (pdfkit, posters for motion),
-                 reel-render.ts (trims + drawtext cards → 1080p24 segments → concat copy); clip.ts (transformers.js CLIP); claude.ts (Anthropic SDK)
+                 reel-render.ts (trims + drawtext cards → 1080p24 segments → concat copy);
+                 agent/run.ts (Claude tool loop, `agent` queue) + agent/tools.ts (read tools + propose_* tools); clip.ts (transformers.js CLIP); claude.ts (Anthropic SDK)
 packages/db      Drizzle schema, migrations (drizzle/), seed. Table for references is `refs` (reserved word).
 packages/media   Pure ffmpeg wrappers: probe, proxy, filmstrip, scene detection, still/GIF/clip, fixtures
 packages/shared  Types, zod schemas, timecode math, job contract, GIF params/estimate, design tokens,
@@ -119,6 +123,19 @@ fixtures/        Generated test media (gitignored)
   motion posters to the live share link (`#slide-N`). Reel MP4: segments share codec params so concat is `-c copy`;
   silent sources get `anullsrc`; output key = hash of the reel content. One portfolio per workspace; unpublished =
   404; slugs are global and unique (409 on clash). Videos play from the proxy (`serializePlayable().playUrl`).
+- **Agents (M8, limited beta):** the loop runs on the worker (`agent` queue) on the Messages API (`claude-opus-5-5`, effort
+  high, server-side refusal fallback `fallbacks: "default"`), as a manual tool loop so Cancel is checked between turns and
+  every step is logged to `agent_tasks.steps`. Tools: read (library search, boards, recent uploads, scenes, Vimeo search,
+  `ingest_link` which only adds to the library) and `propose_*` (create_board, add_to_board, save_links, export_clips,
+  create_deck, create_reel) which only append to the proposal (`packages/shared/src/agents.ts` is the contract). The WEB
+  applies an approved subset (`lib/agents.ts`), records created ids in `applied`, and undo deletes exactly those (plus
+  what `ingest_link` imported). Agent exports render on the worker and are saved by `finalizeTask` when the task is read.
+  Without ANTHROPIC_API_KEY the UI says agents are off. Tests use a scripted fake of the Messages API in
+  `e2e/fake-sites.mjs` (ANTHROPIC_BASE_URL); SDK 1.x authenticates with `Authorization: Bearer`.
+- **Text-to-save (M8):** Twilio webhook `POST /api/twilio/inbound` (SMS and WhatsApp), X-Twilio-Signature checked against
+  TWILIO_WEBHOOK_URL (the exact URL Twilio calls). Verified numbers only (`phone_numbers`, scrypt-hashed 6-digit codes,
+  10 min, 5 tries); links land on the workspace's "Inbox from text" board, reply is TwiML. Without Twilio credentials,
+  outgoing codes go to the console + SMS_LOG_FILE (dev/e2e).
 - **Ref callbacks that other components read in layout effects must be stable** (`useCallback`): an inline ref
   callback is reset to null on every render until after children's layout effects (this hid board arrows).
 - **Honest gaps:** anything stubbed carries `TODO(M#)`.

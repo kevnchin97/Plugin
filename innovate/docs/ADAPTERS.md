@@ -21,6 +21,10 @@ Before enabling or adding an adapter, re-check the platform's current terms; the
   local fake of the Vimeo API (`apps/web/e2e/fake-sites.mjs`).
 - **Not verified against the live Vimeo API**: no Vimeo token was available while building this. The
   request shape follows Vimeo API 3.4 (`GET /videos/{id}?fields=name,duration,width,height,link,download`).
+- **Search (M8 Research Agent):** `VimeoAdapter.search()` calls `GET /videos?query=…&fields=…` with the same
+  token (`VIMEO_ACCESS_TOKEN` alone enables search; importing still needs `INGEST_VIMEO_ENABLED`). Results are
+  saved as links (title, thumbnail, the agent's reason) only after the user approves. Tested against the fake
+  API only, like the import.
 
 ## Chrome extension capture rules (`apps/extension/src/capture.ts`)
 

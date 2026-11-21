@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toasts";
+import { TextToSave } from "./TextToSave";
 
 interface Token {
   id: string;
@@ -21,7 +22,19 @@ function Section({ title, children, hint }: { title: string; hint?: string; chil
   );
 }
 
-export function Settings({ email, appUrl, mode: initialMode, tokens: initial }: { email: string; appUrl: string; mode: "immediate" | "digest" | "off"; tokens: Token[] }) {
+export function Settings({
+  email,
+  appUrl,
+  mode: initialMode,
+  tokens: initial,
+  phones,
+}: {
+  email: string;
+  appUrl: string;
+  mode: "immediate" | "digest" | "off";
+  tokens: Token[];
+  phones: { list: { id: string; phone: string; verified: boolean }[]; textTo: string | null; whatsappTo: string | null };
+}) {
   const toast = useToast();
   const [tokens, setTokens] = useState(initial);
   const [fresh, setFresh] = useState<string | null>(null);
@@ -85,6 +98,10 @@ export function Settings({ email, appUrl, mode: initialMode, tokens: initial }: 
               </li>
             ))}
           </ul>
+        </Section>
+
+        <Section title="Text to save" hint="Text a link from your phone (SMS or WhatsApp) and it's saved to your “Inbox from text” board, with a confirmation reply.">
+          <TextToSave initial={phones.list} textTo={phones.textTo} whatsappTo={phones.whatsappTo} />
         </Section>
 
         <Section title="Email notifications" hint="When someone comments on or favorites something on your boards.">

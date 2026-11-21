@@ -11,6 +11,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 export const MAGIC_LINK_LOG = resolve(root, ".data/e2e-magic-links.log");
 const PORT = Number(process.env.E2E_PORT ?? 3100);
 export const MAIL_LOG = resolve(root, ".data/e2e-mail.log");
+export const SMS_LOG = resolve(root, ".data/e2e-sms.log");
 const RT_PORT = Number(process.env.E2E_REALTIME_PORT ?? 3101);
 const SITES_PORT = Number(process.env.E2E_SITES_PORT ?? 3199);
 const env = {
@@ -26,6 +27,14 @@ const env = {
   INGEST_VIMEO_ENABLED: "true",
   VIMEO_ACCESS_TOKEN: "e2e-vimeo-token",
   VIMEO_API_BASE: `http://localhost:${SITES_PORT}/vimeo-api`,
+  // Agents and reference descriptions talk to a scripted fake of the Anthropic API (e2e/fake-sites.mjs).
+  ANTHROPIC_API_KEY: "e2e-anthropic-key",
+  ANTHROPIC_BASE_URL: `http://localhost:${SITES_PORT}/anthropic`,
+  // Text-to-save: tests sign webhook requests with this token; codes go to the SMS log (no Twilio account).
+  TWILIO_AUTH_TOKEN: "e2e-twilio-token",
+  TWILIO_PHONE_NUMBER: "+15005550006",
+  TWILIO_WEBHOOK_URL: `http://localhost:${PORT}/api/twilio/inbound`,
+  SMS_LOG_FILE: SMS_LOG,
 };
 
 export default defineConfig({

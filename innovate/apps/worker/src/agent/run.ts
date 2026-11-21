@@ -63,6 +63,7 @@ function summarize(value: unknown): { text: string; data?: unknown } {
   if (Array.isArray(value)) return { text: `${value.length} result${value.length === 1 ? "" : "s"}`, data: value.slice(0, 12) };
   if (value && typeof value === "object" && "scenes" in value) return { text: `${(value as { scenes: unknown[] }).scenes.length} scenes` };
   if (value && typeof value === "object" && "change" in value) return { text: String((value as { change: string }).change) };
+  if (value && typeof value === "object" && "title" in value && "type" in value) return { text: `Imported “${String((value as { title: string }).title)}”` };
   return { text: "Done" };
 }
 
