@@ -9,18 +9,33 @@ import { HeaderSearch } from "./HeaderSearch";
 import { ShortcutsButton } from "./ShortcutsOverlay";
 import { ThemeToggle } from "./ThemeToggle";
 
-const SECTIONS: { href: string; label: string; icon: string }[] = [
-  { href: "/", label: "Home", icon: "M4 11.5 12 5l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5h-5v5H5a1 1 0 0 1-1-1z" },
-  { href: "/library", label: "Library", icon: "M5 4h4v16H5zM10.5 4h4v16h-4zM16 5l3.5.9-3.6 14-3.4-.9z" },
-  { href: "/search", label: "Search", icon: "M10.5 4a6.5 6.5 0 1 1 0 13 6.5 6.5 0 0 1 0-13zM15.5 15.5 20 20" },
-  { href: "/make", label: "GIF Maker", icon: "M4 6h16v12H4zM4 9.5h16M8 6v3.5M12 6v3.5M16 6v3.5" },
-  { href: "/shotlists", label: "Shot lists", icon: "M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01" },
-  { href: "/decks", label: "Decks", icon: "M4 5h16v11H4zM12 16v4M8 20h8" },
-  { href: "/reels", label: "Reels", icon: "M4 6h16v12H4zM10 9.5v5l4-2.5z" },
-  { href: "/portfolio", label: "Portfolio", icon: "M12 4a8 8 0 1 1 0 16 8 8 0 0 1 0-16zM4 12h16M12 4c2.5 2.2 3.5 5 3.5 8s-1 5.8-3.5 8c-2.5-2.2-3.5-5-3.5-8s1-5.8 3.5-8z" },
-  { href: "/agents", label: "Agents", icon: "M12 3v3M12 18v3M3 12h3M18 12h3M6 6l2 2M16 16l2 2M18 6l-2 2M8 16l-2 2M12 9a3 3 0 1 1 0 6 3 3 0 0 1 0-6z" },
-  { href: "/settings", label: "Settings", icon: "M12 9a3 3 0 1 1 0 6 3 3 0 0 1 0-6zM12 3l1.8 2.6 3.1-.6.6 3.1L20 10l-1.5 2 1.5 2-2.5 1.9-.6 3.1-3.1-.6L12 21l-1.8-2.6-3.1.6-.6-3.1L4 14l1.5-2L4 10l2.5-1.9.6-3.1 3.1.6z" },
+interface Section {
+  href: string;
+  label: string;
+  icon: string;
+  /** One line on what it's for, shown under the label in the menu. */
+  hint: string;
+  group: "home" | "make" | "present" | "more";
+}
+
+const SECTIONS: Section[] = [
+  { href: "/", label: "Home", hint: "Your boards: collect and arrange references", group: "home", icon: "M4 11.5 12 5l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5h-5v5H5a1 1 0 0 1-1-1z" },
+  { href: "/library", label: "Library", hint: "Everything you've saved, in one place", group: "home", icon: "M5 4h4v16H5zM10.5 4h4v16h-4zM16 5l3.5.9-3.6 14-3.4-.9z" },
+  { href: "/make", label: "GIF Maker", hint: "Cut GIFs, stills and clips from a video", group: "make", icon: "M4 6h16v12H4zM4 9.5h16M8 6v3.5M12 6v3.5M16 6v3.5" },
+  { href: "/shotlists", label: "Shot lists", hint: "Plan a shoot, shot by shot", group: "present", icon: "M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01" },
+  { href: "/decks", label: "Decks", hint: "Treatments and pitch decks to present", group: "present", icon: "M4 5h16v11H4zM12 16v4M8 20h8" },
+  { href: "/reels", label: "Reels", hint: "A showreel of your best clips", group: "present", icon: "M4 6h16v12H4zM10 9.5v5l4-2.5z" },
+  { href: "/portfolio", label: "Portfolio", hint: "Your public page", group: "present", icon: "M12 4a8 8 0 1 1 0 16 8 8 0 0 1 0-16zM4 12h16M12 4c2.5 2.2 3.5 5 3.5 8s-1 5.8-3.5 8c-2.5-2.2-3.5-5-3.5-8s1-5.8 3.5-8z" },
+  { href: "/agents", label: "Agents", hint: "AI helpers (⌘K)", group: "more", icon: "M12 3v3M12 18v3M3 12h3M18 12h3M6 6l2 2M16 16l2 2M18 6l-2 2M8 16l-2 2M12 9a3 3 0 1 1 0 6 3 3 0 0 1 0-6z" },
+  { href: "/settings", label: "Settings", hint: "", group: "more", icon: "M12 9a3 3 0 1 1 0 6 3 3 0 0 1 0-6zM12 3l1.8 2.6 3.1-.6.6 3.1L20 10l-1.5 2 1.5 2-2.5 1.9-.6 3.1-3.1-.6L12 21l-1.8-2.6-3.1.6-.6-3.1L4 14l1.5-2L4 10l2.5-1.9.6-3.1 3.1.6z" },
 ];
+const GROUPS: { key: Section["group"]; title: string | null }[] = [
+  { key: "home", title: null },
+  { key: "make", title: "Make" },
+  { key: "present", title: "Plan and present" },
+];
+/** Pages reached from elsewhere (the top-bar search) still get a breadcrumb. */
+const CRUMB_ONLY = [{ href: "/search", label: "Search" }];
 
 const Icon = ({ d, size = 18 }: { d: string; size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -28,9 +43,29 @@ const Icon = ({ d, size = 18 }: { d: string; size?: number }) => (
   </svg>
 );
 
+function NavItem({ s, path, onNavigate }: { s: Section; path: string; onNavigate(): void }) {
+  const active = s.href === "/" ? path === "/" || path.startsWith("/boards") : path === s.href || path.startsWith(`${s.href}/`);
+  return (
+    <Link
+      href={s.href}
+      onClick={onNavigate}
+      aria-current={active ? "page" : undefined}
+      className={`flex items-start gap-3 rounded-md px-3 py-2 ${active ? "bg-accent-soft" : "hover:bg-surface-3"}`}
+    >
+      <span className={`mt-0.5 ${active ? "text-accent" : "text-text-faint"}`}>
+        <Icon d={s.icon} />
+      </span>
+      <span className="min-w-0">
+        <span className={`block text-md leading-5 ${active ? "font-medium text-accent" : "text-text"}`}>{s.label}</span>
+        <span className="block text-xs leading-4 text-text-faint">{s.hint}</span>
+      </span>
+    </Link>
+  );
+}
+
 function sectionFor(path: string) {
   if (path === "/" || path.startsWith("/boards")) return null; // boards render their own breadcrumbs
-  return SECTIONS.filter((s) => s.href !== "/").find((s) => path === s.href || path.startsWith(`${s.href}/`)) ?? null;
+  return [...SECTIONS, ...CRUMB_ONLY].filter((s) => s.href !== "/").find((s) => path === s.href || path.startsWith(`${s.href}/`)) ?? null;
 }
 
 /**
@@ -64,7 +99,7 @@ export function AppShell({
           </Dialog.Trigger>
           <Dialog.Portal>
             <Dialog.Overlay className="fixed inset-0 z-40 bg-scrim" />
-            <Dialog.Content aria-describedby={undefined} className="fixed inset-y-0 left-0 z-50 flex w-[260px] flex-col bg-surface shadow-xl focus:outline-none" data-testid="nav-drawer">
+            <Dialog.Content aria-describedby={undefined} className="fixed inset-y-0 left-0 z-50 flex w-[300px] flex-col bg-surface shadow-xl focus:outline-none" data-testid="nav-drawer">
               <div className="flex h-12 items-center justify-between border-b border-border px-4">
                 <Dialog.Title className="text-text">
                   <Logo />
@@ -74,23 +109,32 @@ export function AppShell({
                 </Dialog.Close>
               </div>
               <nav aria-label="Main" className="flex-1 overflow-y-auto p-2">
-                {SECTIONS.map((s) => {
-                  const active = s.href === "/" ? path === "/" || path.startsWith("/boards") : path === s.href || path.startsWith(`${s.href}/`);
-                  return (
-                    <Link
-                      key={s.href}
-                      href={s.href}
-                      onClick={() => setOpen(false)}
-                      aria-current={active ? "page" : undefined}
-                      className={`flex items-center gap-3 rounded-md px-3 py-2 text-md ${active ? "bg-accent-soft text-accent" : "text-text hover:bg-surface-3"}`}
-                    >
-                      <span className={active ? "text-accent" : "text-text-faint"}>
-                        <Icon d={s.icon} />
-                      </span>
-                      {s.label}
-                    </Link>
-                  );
-                })}
+                {GROUPS.map((g) => (
+                  <div key={g.key} className={g.title ? "mt-4" : ""}>
+                    {g.title && <div className="px-3 pb-1 text-2xs font-medium tracking-[0.1em] text-text-faint uppercase">{g.title}</div>}
+                    {SECTIONS.filter((s) => s.group === g.key).map((s) => (
+                      <NavItem key={s.href} s={s} path={path} onNavigate={() => setOpen(false)} />
+                    ))}
+                  </div>
+                ))}
+                <div className="mt-4 flex gap-1 border-t border-border pt-2">
+                  {SECTIONS.filter((s) => s.group === "more").map((s) => {
+                    const active = path === s.href || path.startsWith(`${s.href}/`);
+                    return (
+                      <Link
+                        key={s.href}
+                        href={s.href}
+                        onClick={() => setOpen(false)}
+                        aria-current={active ? "page" : undefined}
+                        title={s.hint || undefined}
+                        className={`flex flex-1 items-center justify-center gap-2 rounded-md px-2 py-2 text-sm ${active ? "bg-accent-soft text-accent" : "text-text-muted hover:bg-surface-3 hover:text-text"}`}
+                      >
+                        <Icon d={s.icon} size={16} />
+                        {s.label}
+                      </Link>
+                    );
+                  })}
+                </div>
               </nav>
               <div className="flex items-center justify-between gap-2 border-t border-border p-3">
                 <div className="min-w-0">
