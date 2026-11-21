@@ -28,6 +28,17 @@ async function search(page: Page, q: string, extra = ""): Promise<{ hits: Hit[];
 
 const titles = (hits: Hit[]) => hits.map((h) => h.reference.title);
 
+/** The detected scene the hit's keyframe came from must overlap the expected shot [from, to) in seconds.
+ *  (Scene boundaries can differ slightly between machines, so the check is on the scene, not an exact time.) */
+async function expectSceneOverlaps(page: Page, hit: Hit, from: number, to: number) {
+  expect(hit.time).not.toBeNull();
+  const { reference } = await (await page.request.get(`/api/references/${hit.reference.id}`)).json();
+  const scenes = reference.scenes as { start: number; end: number }[];
+  const scene = scenes.find((s) => hit.time! >= s.start - 0.01 && hit.time! < s.end) ?? scenes.find((s) => Math.abs(s.start - hit.time!) < 0.05);
+  expect(scene, `scene at ${hit.time}s`).toBeDefined();
+  expect(scene!.start < to && scene!.end > from, `scene ${scene!.start}–${scene!.end}s overlaps ${from}–${to}s`).toBe(true);
+}
+
 test("natural-language search ranks images and video keyframes by what they look like", async ({ page }) => {
   test.setTimeout(240_000);
   await signIn(page);
@@ -67,15 +78,13 @@ test("natural-language search ranks images and video keyframes by what they look
   // The film's best-matching scene is the neon shot (videos only, so the check doesn't depend on
   // where the relevance cut-off falls relative to the GIF).
   const filmHit = (await search(page, "pink and teal neon light", "&type=video")).hits.find((h) => h.reference.id === filmId)!;
-  expect(filmHit.time).toBeGreaterThanOrEqual(3.4); // the neon shot runs 3.5 s – 6.5 s
-  expect(filmHit.time).toBeLessThan(6.6);
+  await expectSceneOverlaps(page, filmHit, 3.5, 6.5); // the neon shot runs 3.5 s – 6.5 s
 
   // Cells: the amber-on-violet GIF is the top extract; the film hit lands on that shot.
   const cells = await search(page, "scattered golden dots on purple");
   expect(cells.hits.filter((h) => h.reference.type !== "video")[0]?.reference.title).toBe("Cells, amber on violet");
   const cellsFilm = (await search(page, "scattered golden dots on purple", "&type=video")).hits.find((h) => h.reference.id === filmId)!;
-  expect(cellsFilm.time).toBeGreaterThanOrEqual(6.4);
-  expect(cellsFilm.time).toBeLessThan(9.6);
+  await expectSceneOverlaps(page, cellsFilm, 6.5, 9.5); // the cells shot runs 6.5 s – 9.5 s
 
   // Dusk: warm orange light ranks the dusk still above the neon GIF.
   const dusk = titles((await search(page, "warm orange dusk glow")).hits);

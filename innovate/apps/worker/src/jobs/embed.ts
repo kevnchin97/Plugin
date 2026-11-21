@@ -91,24 +91,34 @@ export async function runEmbed(job: Job<EmbedRefJobData>) {
 
     const rows: (Frame & { vector: number[] })[] = [];
     for (const f of frames) rows.push({ ...f, vector: await embedImageFile(f.file) });
-    await db.transaction(async (tx) => {
-      const sources = rows.map((r) => r.source);
-      await tx
-        .delete(embeddings)
-        .where(sources.length ? and(eq(embeddings.referenceId, referenceId), notInArray(embeddings.source, sources)) : eq(embeddings.referenceId, referenceId));
-      for (const r of rows)
+    // The reference can be deleted while we embed (e.g. an agent's undo); then there's nothing to store.
+    const [still] = await db.select({ id: references.id }).from(references).where(eq(references.id, referenceId));
+    if (!still) return { frames: 0 };
+    try {
+      await db.transaction(async (tx) => {
+        const sources = rows.map((r) => r.source);
         await tx
-          .insert(embeddings)
-          .values({ workspaceId, referenceId, source: r.source, time: r.time, frameKey: r.frameKey, model: CLIP_MODEL, embedding: r.vector })
-          .onConflictDoUpdate({
-            target: [embeddings.referenceId, embeddings.source],
-            set: { time: r.time, frameKey: r.frameKey, model: CLIP_MODEL, embedding: r.vector, createdAt: sql`now()` },
-          });
-      await tx
-        .update(references)
-        .set({ embedding: rows.length ? meanVector(rows.map((r) => r.vector)) : null, embeddedAt: sql`now()` })
-        .where(eq(references.id, referenceId));
-    });
+          .delete(embeddings)
+          .where(sources.length ? and(eq(embeddings.referenceId, referenceId), notInArray(embeddings.source, sources)) : eq(embeddings.referenceId, referenceId));
+        for (const r of rows)
+          await tx
+            .insert(embeddings)
+            .values({ workspaceId, referenceId, source: r.source, time: r.time, frameKey: r.frameKey, model: CLIP_MODEL, embedding: r.vector })
+            .onConflictDoUpdate({
+              target: [embeddings.referenceId, embeddings.source],
+              set: { time: r.time, frameKey: r.frameKey, model: CLIP_MODEL, embedding: r.vector, createdAt: sql`now()` },
+            });
+        await tx
+          .update(references)
+          .set({ embedding: rows.length ? meanVector(rows.map((r) => r.vector)) : null, embeddedAt: sql`now()` })
+          .where(eq(references.id, referenceId));
+      });
+    } catch (err) {
+      // Deleted between the check above and the write (foreign-key violation): nothing to store.
+      const code = (err as { code?: string; cause?: { code?: string } }).cause?.code ?? (err as { code?: string }).code;
+      if (code === "23503") return { frames: 0 };
+      throw err;
+    }
 
     // Claude description (keyword fallback + display), once per reference, only when configured.
     if (!ref.autoDescription && rows.length) {
