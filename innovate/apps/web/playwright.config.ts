@@ -12,6 +12,7 @@ export const MAGIC_LINK_LOG = resolve(root, ".data/e2e-magic-links.log");
 const PORT = Number(process.env.E2E_PORT ?? 3100);
 export const MAIL_LOG = resolve(root, ".data/e2e-mail.log");
 const RT_PORT = Number(process.env.E2E_REALTIME_PORT ?? 3101);
+const SITES_PORT = Number(process.env.E2E_SITES_PORT ?? 3199);
 const env = {
   MAGIC_LINK_LOG_FILE: MAGIC_LINK_LOG,
   MAIL_LOG_FILE: MAIL_LOG,
@@ -19,6 +20,12 @@ const env = {
   INNOVATE_E2E: "1",
   REALTIME_PORT: String(RT_PORT),
   REALTIME_PUBLIC_URL: `ws://localhost:${RT_PORT}`,
+  // The fake sites (e2e/fake-sites.mjs) live on localhost, so the e2e worker may fetch private hosts.
+  INGEST_ALLOW_PRIVATE_URLS: "true",
+  E2E_SITES_PORT: String(SITES_PORT),
+  INGEST_VIMEO_ENABLED: "true",
+  VIMEO_ACCESS_TOKEN: "e2e-vimeo-token",
+  VIMEO_API_BASE: `http://localhost:${SITES_PORT}/vimeo-api`,
 };
 
 export default defineConfig({
@@ -37,6 +44,13 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"], viewport: { width: 1600, height: 960 } } }],
   webServer: [
+    {
+      command: "node e2e/fake-sites.mjs",
+      env,
+      url: `http://localhost:${SITES_PORT}/health`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 15_000,
+    },
     {
       command: "pnpm --filter @innovate/realtime start",
       cwd: root,

@@ -166,3 +166,16 @@ test("variable-frame-rate (phone) footage is conformed so frames stay exact", as
   const luma = Number(/YAVG=([\d.]+)/.exec(out)?.[1]);
   expect(Math.abs(luma - 136)).toBeLessThan(2);
 });
+
+test("Vimeo links import through the official-API adapter when it's enabled", async ({ page }) => {
+  // The e2e environment enables the Vimeo adapter against a local fake of the Vimeo API (fake-sites.mjs).
+  await signIn(page);
+  await page.goto("/make");
+  await page.getByLabel("Video link").fill("https://vimeo.com/123456");
+  await page.getByRole("button", { name: "Import link" }).click();
+  await expect(page).toHaveURL(/\/make\/[0-9a-f-]{36}$/);
+  await expect(page.getByTestId("scene")).toHaveCount(4, { timeout: 90_000 });
+  await expect(page.getByTestId("ref-title")).toHaveText("Night drive (fake Vimeo)");
+  const refs = (await (await page.request.get("/api/references")).json()).references as { sourceUrl: string; title: string }[];
+  expect(refs[0]).toMatchObject({ sourceUrl: "https://vimeo.com/123456" });
+});

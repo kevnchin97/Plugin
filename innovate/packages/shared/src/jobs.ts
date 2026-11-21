@@ -35,13 +35,24 @@ export interface ExportJobData {
   request: ExportRequest;
 }
 
+/** Fetch an image from the web (extension saves, page preview images). */
+export interface ImportJobData {
+  type: "import";
+  jobId: string;
+  referenceId: string;
+  workspaceId: string;
+  url: string;
+  /** "original": the reference IS this image. "thumbnail": a preview image for a link reference. */
+  as: "original" | "thumbnail";
+}
+
 /** Daily email digest of unsent notifications (repeatable, scheduled by the worker). */
 export interface DigestJobData {
   type: "digest";
   jobId: string;
 }
 
-export type MediaJobData = IngestJobData | ExportJobData | DigestJobData;
+export type MediaJobData = IngestJobData | ExportJobData | DigestJobData | ImportJobData;
 
 export interface ExportOutput {
   key: string;

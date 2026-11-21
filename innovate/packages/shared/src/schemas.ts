@@ -78,3 +78,23 @@ export const createImageUploadSchema = z.object({
   height: z.number().int().positive().max(20_000),
   boardId: z.uuid().nullable().optional(),
 });
+
+/** What the browser extension (and text-to-save) can send. */
+export const extSaveSchema = z.object({
+  kind: z.enum(["image", "video", "page"]),
+  /** The image/video URL, or the page URL for kind "page". */
+  url: z.url().max(4096),
+  pageUrl: z.url({ protocol: /^https?$/ }).max(4096).optional(),
+  title: z.string().max(500).optional(),
+  /** Preview image for pages (og:image). */
+  imageUrl: z.url({ protocol: /^https?$/ }).max(4096).optional(),
+  width: z.number().int().positive().max(50_000).optional(),
+  height: z.number().int().positive().max(50_000).optional(),
+  note: z.string().max(2000).optional(),
+  boardId: z.uuid().nullable().optional(),
+  /** The page told us it's a video (e.g. og:video) even without a file extension. */
+  assumeVideo: z.boolean().optional(),
+});
+
+export const createTokenSchema = z.object({ name: z.string().trim().min(1).max(80).default("Browser extension") });
+export const notificationPrefSchema = z.object({ mode: z.enum(["immediate", "digest", "off"]) });

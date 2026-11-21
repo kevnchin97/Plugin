@@ -30,6 +30,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               <NavLink href="/make">GIF Maker</NavLink>
             </nav>
             <div className="ml-auto flex items-center gap-2">
+              <Link href="/settings" className="rounded-md px-2 py-1 text-sm text-text-muted hover:text-text">
+                Settings
+              </Link>
               <ShortcutsButton />
               <ThemeToggle initial={theme} />
               <form action={doSignOut}>

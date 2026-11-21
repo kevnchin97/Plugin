@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { formatTimecode, secondsToFrame } from "@innovate/shared";
+import { formatTimecode, hostOf, secondsToFrame } from "@innovate/shared";
 import { Badges } from "@/components/feedback/BoardSocial";
 import { MotionMedia } from "@/components/media/MotionMedia";
 import type { RefLite } from "@/lib/boards";
@@ -15,6 +15,7 @@ export function aspectOf(ref: RefLite | undefined) {
 export function ReferenceBody({ reference, parentTitle, hovering }: { reference: RefLite | undefined; parentTitle?: string; hovering: boolean }) {
   if (!reference)
     return <div className="grid aspect-video place-items-center text-xs text-text-faint">Missing reference</div>;
+  if (reference.type === "link") return <LinkReference reference={reference} />;
   const fps = reference.fps;
   const tc = (s: number | null) => (s === null || !fps ? null : formatTimecode(secondsToFrame(s, fps), fps));
   const range =
@@ -188,6 +189,35 @@ export function BoardBody({ title, cover, count }: { title: string; cover: strin
         <div className="text-2xs text-text-faint">
           board · {count} {count === 1 ? "item" : "items"}
         </div>
+      </div>
+    </>
+  );
+}
+
+/** A saved page: its preview image (og:image, imported by the worker) at native ratio, title and host. */
+function LinkReference({ reference }: { reference: RefLite }) {
+  const host = reference.sourceUrl ? hostOf(reference.sourceUrl) : "";
+  return (
+    <>
+      {reference.thumbnailUrl && (
+        <div className="relative bg-surface-3" style={{ aspectRatio: aspectOf(reference) }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={reference.thumbnailUrl} alt="" loading="lazy" draggable={false} className="block h-full w-full object-cover" />
+          <Badges referenceId={reference.id} />
+        </div>
+      )}
+      <div className="flex items-center gap-2.5 px-3 py-2.5">
+        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-surface-3 text-text-faint" aria-hidden="true">
+          ↗
+        </span>
+        <span className="min-w-0">
+          <span className="block truncate text-sm font-medium">{reference.title}</span>
+          {reference.sourceUrl ? (
+            <a href={reference.sourceUrl} target="_blank" rel="noopener noreferrer" onPointerDown={(e) => e.stopPropagation()} className="block truncate text-2xs text-text-faint hover:text-accent">
+              {host}
+            </a>
+          ) : null}
+        </span>
       </div>
     </>
   );

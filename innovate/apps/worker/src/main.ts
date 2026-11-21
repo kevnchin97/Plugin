@@ -5,6 +5,7 @@ import { db, redisConnection, storage } from "./context";
 import { env } from "./env";
 import { runExport } from "./jobs/export";
 import { sendDigests } from "./jobs/digest";
+import { runImport } from "./jobs/import";
 import { runIngest } from "./jobs/ingest";
 
 function readable(err: unknown): string {
@@ -14,6 +15,10 @@ function readable(err: unknown): string {
 
 async function handle(job: Job<MediaJobData>) {
   if (job.data.type === "digest") return sendDigests();
+  if (job.data.type === "import") {
+    await db.update(mediaJobs).set({ status: "active", attempts: job.attemptsMade + 1 }).where(eq(mediaJobs.id, job.data.jobId));
+    return runImport(job as Job<never>);
+  }
   await db
     .update(mediaJobs)
     .set({ status: "active", attempts: job.attemptsMade + 1, error: null })
@@ -48,7 +53,7 @@ worker.on("failed", async (job, err) => {
     .update(mediaJobs)
     .set(final ? { status: "failed", error: message } : { status: "queued", error: `Retrying: ${message}` })
     .where(eq(mediaJobs.id, job.data.jobId));
-  if (final && job.data.type === "ingest")
+  if (final && (job.data.type === "ingest" || (job.data.type === "import" && job.data.as === "original")))
     await db.update(references).set({ status: "failed", error: message }).where(eq(references.id, job.data.referenceId));
 });
 

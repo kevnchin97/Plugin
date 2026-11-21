@@ -36,6 +36,13 @@
       "when": 1795218324881,
       "tag": "0004_sharing",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1795219454653,
+      "tag": "0005_api_tokens",
+      "breakpoints": true
     }
   ]
 }

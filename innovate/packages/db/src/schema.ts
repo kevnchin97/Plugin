@@ -188,7 +188,7 @@ export const mediaJobs = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
     referenceId: uuid("reference_id").notNull().references(() => references.id, { onDelete: "cascade" }),
-    type: text("type").$type<"ingest" | "export">().notNull(),
+    type: text("type").$type<"ingest" | "export" | "import">().notNull(),
     /** Same request => same key => same job and output (idempotency). */
     idempotencyKey: text("idempotency_key").notNull(),
     status: text("status").$type<JobStatus>().notNull().default("queued"),
@@ -398,3 +398,23 @@ export const notifications = pgTable(
 
 export type ShareLink = typeof shareLinks.$inferSelect;
 export type Comment = typeof comments.$inferSelect;
+
+/* ---------- Extension tokens (M4) ---------- */
+
+/** Personal tokens for the browser extension. Only a SHA-256 hash of the token is stored. */
+export const apiTokens = pgTable(
+  "api_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    tokenHash: text("token_hash").notNull().unique(),
+    /** First characters, so people can tell tokens apart. */
+    prefix: text("prefix").notNull(),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("api_tokens_user_idx").on(t.userId)],
+);

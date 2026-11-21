@@ -123,7 +123,7 @@ export async function seedBoards(opts: { workspaceId: string; userId: string; fi
   await put(locations, [ref("fractal", 40, 40, 300), ref("dusk", 380, 40, 300), { id: crypto.randomUUID(), kind: "note", x: 40, y: 280, w: 300, content: { text: "Recce shortlist\nRidge road, the closed petrol station, the lake car park." } }]);
 
   const night = await mkBoard("Night Exteriors");
-  await put(night, [ref("ember", 40, 40, 320), ref("neon", 390, 40, 320), ref("cells", 740, 40, 320), { id: crypto.randomUUID(), kind: "note", x: 40, y: 260, w: 320, content: { text: "Exposure\nPush the blacks; protect the highlights on practicals." } }]);
+  await put(night, [ref("ember", 40, 40, 320), ref("neon", 390, 40, 320), ref("cells", 740, 40, 320), { id: crypto.randomUUID(), kind: "note", x: 40, y: 300, w: 320, content: { text: "Exposure\nPush the blacks; protect the highlights on practicals." } }]);
 
   const handheld = await mkBoard("Handheld Intimacy");
   const close = crypto.randomUUID();

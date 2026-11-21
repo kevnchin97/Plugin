@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { and, desc, eq, lt, references } from "@innovate/db";
-import { createReferenceSchema, detectPlatform, enabledAdapters, storageKeys } from "@innovate/shared";
+import { createReferenceSchema, detectPlatform, storageKeys } from "@innovate/shared";
+import { adapterFor } from "@innovate/shared/adapters";
 import { HttpError, parseJson, route } from "@/lib/api";
 import { serializeRefLite } from "@/lib/boards";
 import { upsertJob } from "@/lib/media";
@@ -58,7 +59,8 @@ export const POST = route(async (req: Request) => {
 
   const url = new URL(input.url);
   const platform = detectPlatform(url);
-  if (platform && !enabledAdapters.some((a) => a.canHandle(url)))
+  const adapter = adapterFor(url);
+  if (platform && !adapter)
     throw new HttpError(
       422,
       `${PLATFORM_NAMES[platform] ?? platform} links need an ingest adapter, which isn't enabled yet. Upload the file, or paste a direct link to a video file.`,
@@ -71,9 +73,10 @@ export const POST = route(async (req: Request) => {
       type: "video",
       status: "pending",
       stage: "fetching",
-      title: decodeURIComponent(url.pathname.split("/").pop() || url.hostname).replace(/\.[a-z0-9]{2,4}$/i, "") || "Untitled",
+      // Platform links get their real title from the adapter on the worker.
+      title: adapter ? "Untitled" : decodeURIComponent(url.pathname.split("/").pop() || url.hostname).replace(/\.[a-z0-9]{2,4}$/i, "") || "Untitled",
       sourceUrl: url.toString(),
-      sourcePlatform: "direct",
+      sourcePlatform: adapter ? adapter.id : "direct",
       createdBy: ctx.userId,
     });
   const job = await upsertJob({ workspaceId: ctx.workspaceId, referenceId: id, type: "ingest", idempotencyKey: `ingest:${id}`, createdBy: ctx.userId });

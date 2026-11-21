@@ -7,6 +7,10 @@ import { copyFile } from "node:fs/promises";
 import { type IngestJobData, storageKeys } from "@innovate/shared";
 import { db, dirs, storage } from "../context";
 import { env } from "../env";
+import { adapterFor } from "@innovate/shared/adapters";
+import { createWriteStream } from "node:fs";
+import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 import { downloadUrl } from "../fetch-url";
 import { localOriginal } from "../originals";
 import { Progress } from "../progress";
@@ -47,11 +51,22 @@ export async function runIngest(job: Job<IngestJobData>) {
       if (!ref.sourceUrl) throw new Error("The upload didn't finish. Try uploading the file again.");
       await progress.setStage("fetching", 0);
       const tmp = join(work, "download");
-      const got = await downloadUrl(ref.sourceUrl, tmp, {
-        maxBytes: env.INGEST_MAX_BYTES,
-        allowPrivate: env.INGEST_ALLOW_PRIVATE_URLS,
-        onProgress: progress.span(0, 0.1),
-      });
+      const adapter = adapterFor(new URL(ref.sourceUrl));
+      let got: { contentType: string; bytes: number; filename: string };
+      if (adapter) {
+        // Platform link through its adapter (official API); see packages/shared/src/server/adapters.ts.
+        const meta = await adapter.fetchMetadata(new URL(ref.sourceUrl));
+        const media = await adapter.fetchMedia(new URL(ref.sourceUrl));
+        await pipeline(Readable.fromWeb(media.stream as never), createWriteStream(tmp));
+        const { size } = await import("node:fs/promises").then((fs) => fs.stat(tmp));
+        got = { contentType: media.contentType, bytes: size, filename: meta.title };
+      } else {
+        got = await downloadUrl(ref.sourceUrl, tmp, {
+          maxBytes: env.INGEST_MAX_BYTES,
+          allowPrivate: env.INGEST_ALLOW_PRIVATE_URLS,
+          onProgress: progress.span(0, 0.1),
+        });
+      }
       originalKey = storageKeys.original(workspaceId, referenceId, EXT[got.contentType] ?? "mp4");
       await storage.uploadFile(originalKey, tmp, got.contentType);
       await db

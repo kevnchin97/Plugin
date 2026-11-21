@@ -2,8 +2,8 @@
  * Ingest adapters (SPEC §5.1 Input). Platform links go through an adapter behind one
  * interface; uploads and direct video URLs never need one.
  *
- * TODO(M4): implement adapters, starting with Vimeo's official API for videos the user owns,
- * each enabled by a config flag after checking the platform's terms. None are enabled in M1.
+ * Implementations live server-side in ./server/adapters.ts (Vimeo, via its official API) and are
+ * enabled by config flags; YouTube and Instagram are deliberately not implemented (their terms).
  */
 export interface IngestAdapter {
   id: string;
@@ -22,5 +22,3 @@ export function detectPlatform(url: URL): string | null {
   for (const [re, name] of PLATFORMS) if (re.test(url.hostname)) return name;
   return null;
 }
-
-export const enabledAdapters: IngestAdapter[] = [];

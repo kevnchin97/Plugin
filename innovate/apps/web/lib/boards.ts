@@ -224,24 +224,24 @@ type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 export async function placeOnBoard(tx: Db | Tx, workspaceId: string, boardId: string, referenceId: string, userId: string, width = 240) {
   const [b] = await tx.select({ id: boards.id }).from(boards).where(and(eq(boards.id, boardId), eq(boards.workspaceId, workspaceId)));
   if (!b) throw new HttpError(404, "That board doesn't exist in this workspace.");
-  const [extent] = await tx
-    .select({ maxY: sql<number>`coalesce(max(${boardItems.y}), 0)`, maxZ: sql<number>`coalesce(max(${boardItems.z}), 0)`, n: sql<number>`count(*)` })
+  // The server doesn't know rendered card heights, so place new cards to the right of everything
+  // loose on the board (top-aligned), wrapping to a new band once the board gets wide.
+  const loose = await tx
+    .select({ x: boardItems.x, y: boardItems.y, w: boardItems.w, z: boardItems.z })
     .from(boardItems)
-    .where(and(eq(boardItems.boardId, boardId), sql`${boardItems.columnId} is null`));
-  const n = Number(extent?.n ?? 0);
+    .where(and(eq(boardItems.boardId, boardId), sql`${boardItems.columnId} is null`, sql`${boardItems.kind} <> 'arrow'`));
+  const maxZ = Math.max(0, ...loose.map((i) => i.z));
+  const bandTop = loose.length ? Math.max(...loose.map((i) => i.y)) : 40;
+  const band = loose.filter((i) => i.y >= bandTop - 400);
+  let x = band.length ? Math.max(...band.map((i) => i.x + i.w)) + 32 : 40;
+  let y = band.length ? Math.min(...band.map((i) => i.y)) : 40;
+  if (x > 2200) {
+    x = 40;
+    y = bandTop + 520;
+  }
   const [item] = await tx
     .insert(boardItems)
-    .values({
-      workspaceId,
-      boardId,
-      kind: "reference",
-      referenceId,
-      x: 40 + (n % 5) * (width + 24),
-      y: n ? Number(extent!.maxY) + 40 + Math.floor(n / 5) * 8 : 40,
-      w: width,
-      z: Number(extent?.maxZ ?? 0) + 1,
-      createdBy: userId,
-    })
+    .values({ workspaceId, boardId, kind: "reference", referenceId, x: Math.round(x), y: Math.round(y), w: width, z: maxZ + 1, createdBy: userId })
     .returning({ id: boardItems.id });
   await tx.update(boards).set({ updatedAt: new Date() }).where(eq(boards.id, boardId));
   return item!.id;
