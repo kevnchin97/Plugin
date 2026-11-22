@@ -1,7 +1,7 @@
 /** Proxy, filmstrip and thumbnails: the ingest-side derivatives (SPEC §5.1 Processing). */
 import { access, copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { availableParallelism } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { type FilmstripInfo, type FrameRate } from "@innovate/shared";
 import { runFfmpeg } from "./run";
 import { buildScenes, DEFAULT_CUT_OPTIONS, detectCuts, type DetectedScene, type FrameStat, parseFrameStats } from "./scenes";
@@ -161,7 +161,7 @@ export function segmentArgs(
   const graph = [
     `[0:v]setpts=PTS-STARTPTS,scale=w='trunc(${h}*dar/2)*2':h='trunc(${h}/2)*2':flags=bicubic,setsar=1,format=yuv420p,split=3[p0][a0][f0]`,
     `[p0]${proxyTrim}[p]`,
-    `[a0]${analysisEnd.slice(1) || "null"},scale=w=256:h=-2:flags=fast_bilinear,select='gte(scene,0)',signalstats,metadata=mode=print:file=${files.stats}[an]`,
+    `[a0]${analysisEnd.slice(1) || "null"},scale=w=256:h=-2:flags=fast_bilinear,select='gte(scene,0)',signalstats,metadata=mode=print:file=${basename(files.stats)}[an]`,
     `[f0]select='${pick}',scale=${o.plan.tileWidth}:${o.plan.tileHeight}:flags=lanczos,setsar=1[tl]`,
   ].join(";");
   // trim= drops frames but doesn't stop the decoder; -t stops reading a few frames past the chunk.
@@ -238,7 +238,10 @@ export async function analyzeSource(
       };
       const mine = tiles.filter((f) => f >= seg.start && (seg.end === null || f < seg.end));
       const segSeconds = (((seg.end ?? o.frameCount) - seg.start) * o.fps.den) / o.fps.num;
+      // ffmpeg runs in the work folder: the stats file is named inside a filter graph, where an absolute
+      // Windows path ("C:\\…") would be read as option separators and escapes.
       await runFfmpeg(segmentArgs(input, seg, files, o, mine), {
+        cwd: o.workDir,
         durationSec: Math.max(0.1, segSeconds),
         signal: o.signal,
         onProgress: (f) => {

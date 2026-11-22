@@ -21,6 +21,8 @@ export interface RunOptions {
   /** Receives stdout lines (when not used for progress). */
   onStdoutLine?: (line: string) => void;
   signal?: AbortSignal;
+  /** Working directory (lets filter graphs name files without absolute paths, which break on Windows drive letters). */
+  cwd?: string;
 }
 
 /** Turn ffmpeg's stderr into one readable sentence for the UI. */
@@ -39,7 +41,7 @@ export function explainFfmpegError(stderr: string): string {
 
 function spawnTool(bin: string, args: string[], opts: RunOptions & { progress: boolean }): Promise<string> {
   return new Promise((resolve, reject) => {
-    const child = spawn(bin, args, { stdio: ["ignore", "pipe", "pipe"], signal: opts.signal });
+    const child = spawn(bin, args, { stdio: ["ignore", "pipe", "pipe"], signal: opts.signal, cwd: opts.cwd });
     let stdout = "";
     let stderr = "";
     let partial = "";

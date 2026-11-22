@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { mkdir, rm, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import type { QueueJob as Job } from "@innovate/shared/queue";
 import { and, asc, eq, inArray, mediaJobs, reelItems, reels, references } from "@innovate/db";
 import { runFfmpeg } from "@innovate/media";
@@ -25,8 +25,8 @@ async function card(out: string, work: string, name: string, title: string, sub:
   await writeFile(sf, sub);
   const d = REEL_CARD_SECONDS;
   const text = [
-    `drawtext=font=Sans:textfile='${tf}':fontcolor=0xf2ece2:fontsize=76:x=(w-text_w)/2:y=(h-text_h)/2-${sub ? 36 : 0}`,
-    sub ? `drawtext=font=Sans:textfile='${sf}':fontcolor=0xa59c8f:fontsize=34:x=(w-text_w)/2:y=(h/2)+40` : null,
+    `drawtext=font=Sans:textfile='${basename(tf)}':fontcolor=0xf2ece2:fontsize=76:x=(w-text_w)/2:y=(h-text_h)/2-${sub ? 36 : 0}`,
+    sub ? `drawtext=font=Sans:textfile='${basename(sf)}':fontcolor=0xa59c8f:fontsize=34:x=(w-text_w)/2:y=(h/2)+40` : null,
     `fade=t=in:st=0:d=0.4,fade=t=out:st=${d - 0.4}:d=0.4`,
   ]
     .filter(Boolean)
@@ -40,7 +40,7 @@ async function card(out: string, work: string, name: string, title: string, sub:
     "-map", "0:v", "-map", "1:a",
     ...VIDEO_OUT, ...AUDIO_OUT,
     out,
-  ]);
+  ], { cwd: work }); // text files by name: an absolute Windows path breaks the filter graph
 }
 
 /**

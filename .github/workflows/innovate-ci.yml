@@ -91,10 +91,14 @@ jobs:
           name: Innovate-Setup-windows
           path: innovate/apps/desktop/dist/Innovate-Setup-*.exe
           if-no-files-found: error
+      - name: App log
+        if: always()
+        run: |
+          mkdir -p apps/desktop/dist/smoke
+          cp "$APPDATA/Innovate/logs/server.log" apps/desktop/dist/smoke/ 2>/dev/null || true
+          tail -n 120 apps/desktop/dist/smoke/server.log 2>/dev/null || echo "no app log"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: windows-smoke
-          path: |
-            innovate/apps/desktop/dist/smoke
-            ~/AppData/Roaming/Innovate/logs
+          path: innovate/apps/desktop/dist/smoke
