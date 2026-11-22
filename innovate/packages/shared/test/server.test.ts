@@ -19,7 +19,11 @@ describe("signed tokens", () => {
     const t = sign({ room: "board:1", exp: Date.now() + 60_000 }, "rt");
     expect(verify<{ room: string }>(t, "rt")?.room).toBe("board:1");
     expect(verify(t, "guest")).toBeNull();
-    expect(verify(t.replace(/.$/, (c) => (c === "A" ? "B" : "A")), "rt")).toBeNull();
+    // Flip a character in the middle of the signature: the last base64url character carries padding
+    // bits, so changing it can decode to the same bytes (and the test would pass by chance).
+    const i = t.length - 10;
+    const tampered = t.slice(0, i) + (t[i] === "A" ? "B" : "A") + t.slice(i + 1);
+    expect(verify(tampered, "rt")).toBeNull();
     expect(verify(sign({ exp: Date.now() - 1 }, "rt"), "rt")).toBeNull();
   });
 });
