@@ -1,0 +1,34 @@
+# Installer for the Innovate desktop app (see scripts/package.mjs, which stages .stage/ first).
+appId: app.innovate.desktop
+productName: Innovate
+electronVersion: 44.11.5
+directories:
+  app: .stage/app
+  output: dist
+  buildResources: build
+asar: true
+npmRebuild: false
+# The engine (server, web, migrations) is copied into resources/ by this hook, outside the asar, so
+# ffmpeg, the AI runtime and the database files are real files.
+afterPack: scripts/after-pack.cjs
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: build/icon.png
+nsis:
+  oneClick: true
+  perMachine: false
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Innovate
+  artifactName: Innovate-Setup-${version}.exe
+  # Keep boards and files when the app is uninstalled or updated.
+  deleteAppDataOnUninstall: false
+mac:
+  target: dmg
+  icon: build/icon.png
+  category: public.app-category.productivity
+linux:
+  target: dir
+  icon: build/icon.png

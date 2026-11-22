@@ -3,11 +3,11 @@
  * checkout has something to open in the GIF Maker. Run after `pnpm db:seed`.
  * Uses only generated media (packages/media fixtures), never downloaded footage.
  */
-import { Queue } from "bullmq";
+import { openQueue } from "@innovate/shared/queue";
 import { and, closeDb, eq, mediaJobs, references, users, memberships } from "@innovate/db";
 import { DEMO_FIXTURE, ensureFixtures, fixturePath } from "@innovate/media";
 import { MEDIA_QUEUE, type MediaJobData, storageKeys } from "@innovate/shared";
-import { db, redisConnection, storage } from "./context";
+import { db, storage } from "./context";
 import { SEED_BOARDS, seedBoards } from "./seed-boards";
 
 await ensureFixtures({ only: [DEMO_FIXTURE.file], log: console.log });
@@ -44,7 +44,7 @@ const [job] = await db
   .values({ workspaceId: owner.workspaceId, referenceId: id, type: "ingest", idempotencyKey: `ingest:${id}`, createdBy: owner.userId })
   .onConflictDoUpdate({ target: [mediaJobs.workspaceId, mediaJobs.idempotencyKey], set: { status: "queued", stage: "queued", progress: 0, error: null } })
   .returning();
-const queue = new Queue<MediaJobData>(MEDIA_QUEUE, { connection: redisConnection() });
+const queue = openQueue<MediaJobData>(MEDIA_QUEUE);
 await queue.remove(job!.id).catch(() => {});
 await queue.add("ingest", { type: "ingest", jobId: job!.id, referenceId: id, workspaceId: owner.workspaceId }, { jobId: job!.id, attempts: 3 });
 await queue.close();

@@ -13,6 +13,7 @@
     "./mailer": "./src/server/mailer.ts",
     "./adapters": "./src/server/adapters.ts",
     "./embed-queue": "./src/server/embed-queue.ts",
+    "./queue": "./src/server/queue.ts",
     "./twilio": "./src/server/twilio.ts"
   },
   "scripts": {

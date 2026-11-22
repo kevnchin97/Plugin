@@ -1,7 +1,7 @@
 import { createWriteStream } from "node:fs";
 import { mkdir, rm } from "node:fs/promises";
 import { join } from "node:path";
-import type { Job } from "bullmq";
+import type { QueueJob as Job } from "@innovate/shared/queue";
 import PDFDocument from "pdfkit";
 import { and, asc, decks, desc, eq, inArray, isNull, mediaJobs, references, shareLinks, slides, sql } from "@innovate/db";
 import { runFfmpeg } from "@innovate/media";

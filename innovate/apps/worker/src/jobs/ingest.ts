@@ -1,6 +1,6 @@
 import { mkdir, rm } from "node:fs/promises";
 import { join } from "node:path";
-import type { Job } from "bullmq";
+import type { QueueJob as Job } from "@innovate/shared/queue";
 import { and, eq, mediaJobs, references, scenes } from "@innovate/db";
 import { analyzeSource, chooseMasterRate, createMaster, createThumbnail, needsMaster, planFilmstrip, probe, sampleGifDensity } from "@innovate/media";
 import { copyFile } from "node:fs/promises";

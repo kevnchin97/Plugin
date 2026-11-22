@@ -51,8 +51,50 @@ jobs:
       - run: pnpm --filter @innovate/web exec playwright install --with-deps chromium
       - run: pnpm e2e
         env: { CI: "true" }
+      # The same suite against the desktop app's single process (embedded database, no Docker services).
+      - run: pnpm e2e:desktop
+        env: { CI: "true" }
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: playwright-report
           path: innovate/apps/web/playwright-report
+
+  # The Windows app: build the installer, install it, and drive the installed app (scripts/smoke.mjs).
+  windows-app:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+        working-directory: innovate
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10.28.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: cp .env.example .env
+      # Hoisted node_modules: the standalone web server is copied into the app, and pnpm's symlinks don't survive that.
+      - run: pnpm install --frozen-lockfile --config.node-linker=hoisted
+      - run: pnpm --filter @innovate/desktop package
+      - name: Install silently
+        run: |
+          ./apps/desktop/dist/Innovate-Setup-*.exe //S
+          for i in $(seq 1 60); do exe=$(ls "$LOCALAPPDATA"/Programs/*/Innovate.exe 2>/dev/null | head -1); [ -n "$exe" ] && break; sleep 2; done
+          echo "installed: $exe"
+          echo "INNOVATE_EXE=$exe" >> "$GITHUB_ENV"
+      - name: Smoke test the installed app
+        run: node apps/desktop/scripts/smoke.mjs "$INNOVATE_EXE"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Innovate-Setup-windows
+          path: innovate/apps/desktop/dist/Innovate-Setup-*.exe
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-smoke
+          path: |
+            innovate/apps/desktop/dist/smoke
+            ~/AppData/Roaming/Innovate/logs

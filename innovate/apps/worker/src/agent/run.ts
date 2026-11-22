@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { Job } from "bullmq";
+import type { QueueJob as Job } from "@innovate/shared/queue";
 import { agentTasks, eq, sql } from "@innovate/db";
 import type { AgentAction, AgentJobData, AgentProposal, AgentStep, AgentStepKind } from "@innovate/shared";
 import { publish } from "@innovate/shared/realtime";

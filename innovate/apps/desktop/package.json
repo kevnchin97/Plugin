@@ -1,0 +1,26 @@
+{
+  "name": "@innovate/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Innovate desktop app (Electron + the whole app in one process)",
+  "scripts": {
+    "build:web": "node scripts/build-web.mjs",
+    "start": "NODE_USE_ENV_PROXY=1 tsx src/server.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "package": "node scripts/package.mjs"
+  },
+  "devDependencies": {
+    "@innovate/db": "workspace:*",
+    "@innovate/realtime": "workspace:*",
+    "@innovate/shared": "workspace:*",
+    "@innovate/worker": "workspace:*",
+    "@types/node": "22.20.5",
+    "electron": "44.11.5",
+    "electron-builder": "26.18.0",
+    "esbuild": "0.28.2",
+    "tsx": "4.23.15"
+  },
+  "main": "electron/main.cjs"
+}

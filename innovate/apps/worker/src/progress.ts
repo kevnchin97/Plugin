@@ -1,4 +1,4 @@
-import type { Job } from "bullmq";
+import type { QueueJob as Job } from "@innovate/shared/queue";
 import { eq, mediaJobs, references } from "@innovate/db";
 import type { JobStage } from "@innovate/shared";
 import { db } from "./context";

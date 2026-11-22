@@ -37,6 +37,23 @@ const env = {
   SMS_LOG_FILE: SMS_LOG,
 };
 
+/**
+ * E2E_DESKTOP=1 runs the same suite against the desktop app's single process (embedded database,
+ * in-process queue and events, local files) instead of the Docker services.
+ */
+export const DESKTOP = process.env.E2E_DESKTOP === "1";
+const desktopData = resolve(root, ".data/e2e-desktop");
+
+const servers = [
+  {
+    command: "node e2e/fake-sites.mjs",
+    env,
+    url: `http://localhost:${SITES_PORT}/health`,
+    reuseExistingServer: !process.env.CI,
+    timeout: 15_000,
+  },
+];
+
 export default defineConfig({
   testDir: "./e2e",
   timeout: 120_000,
@@ -52,39 +69,45 @@ export default defineConfig({
     trace: "off",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"], viewport: { width: 1600, height: 960 } } }],
-  webServer: [
-    {
-      command: "node e2e/fake-sites.mjs",
-      env,
-      url: `http://localhost:${SITES_PORT}/health`,
-      reuseExistingServer: !process.env.CI,
-      timeout: 15_000,
-    },
-    {
-      command: "pnpm --filter @innovate/realtime start",
-      cwd: root,
-      env,
-      url: `http://localhost:${RT_PORT}/health`,
-      reuseExistingServer: !process.env.CI,
-      timeout: 30_000,
-    },
-    {
-      command: "pnpm --filter @innovate/worker start",
-      cwd: root,
-      env,
-      // The worker has no HTTP port; Playwright waits on the web server and the tests wait on jobs.
-      reuseExistingServer: true,
-      stdout: "pipe",
-      timeout: 60_000,
-      wait: { stdout: /listening on "media"/ },
-    },
-    {
-      command: `pnpm --filter @innovate/web build && pnpm --filter @innovate/web exec next start --port ${PORT}`,
-      cwd: root,
-      env,
-      url: `http://localhost:${PORT}/login`,
-      reuseExistingServer: !process.env.CI,
-      timeout: 240_000,
-    },
-  ],
+  webServer: DESKTOP
+    ? [
+        ...servers,
+        {
+          command: `rm -rf ${desktopData} && pnpm --filter @innovate/desktop build:web && pnpm --filter @innovate/desktop start`,
+          cwd: root,
+          env: { ...env, INNOVATE_DATA_DIR: desktopData, INNOVATE_PORT: String(PORT), INNOVATE_REALTIME_PORT: String(RT_PORT) },
+          url: `http://127.0.0.1:${PORT}/login`,
+          reuseExistingServer: !process.env.CI,
+          timeout: 300_000,
+        },
+      ]
+    : [
+        ...servers,
+        {
+          command: "pnpm --filter @innovate/realtime start",
+          cwd: root,
+          env,
+          url: `http://localhost:${RT_PORT}/health`,
+          reuseExistingServer: !process.env.CI,
+          timeout: 30_000,
+        },
+        {
+          command: "pnpm --filter @innovate/worker start",
+          cwd: root,
+          env,
+          // The worker has no HTTP port; Playwright waits on the web server and the tests wait on jobs.
+          reuseExistingServer: true,
+          stdout: "pipe",
+          timeout: 60_000,
+          wait: { stdout: /listening on "media"/ },
+        },
+        {
+          command: `pnpm --filter @innovate/web build && pnpm --filter @innovate/web exec next start --port ${PORT}`,
+          cwd: root,
+          env,
+          url: `http://localhost:${PORT}/login`,
+          reuseExistingServer: !process.env.CI,
+          timeout: 240_000,
+        },
+      ],
 });

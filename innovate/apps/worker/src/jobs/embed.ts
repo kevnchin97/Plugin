@@ -1,6 +1,6 @@
-import { mkdir, rm } from "node:fs/promises";
+import { mkdir, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
-import type { Job } from "bullmq";
+import type { QueueJob as Job } from "@innovate/shared/queue";
 import { and, asc, embeddings, eq, isNull, notInArray, references, scenes, sql } from "@innovate/db";
 import { runFfmpeg } from "@innovate/media";
 import { CLIP_MODEL, type EmbedRefJobData } from "@innovate/shared";
@@ -88,6 +88,8 @@ export async function runEmbed(job: Job<EmbedRefJobData>) {
         for (let t = every / 2; t < d; t += every) if (!frames.some((f) => f.time !== null && Math.abs(f.time - t) < every / 3)) times.push(t);
         for (const [i, t] of times.entries()) {
           const file = await toJpeg(src, join(work, `sample${i}.jpg`), t);
+          // A seek near the end can land after the last decodable frame: ffmpeg succeeds but writes nothing.
+          if (!(await stat(file).catch(() => null))) continue;
           const key = `ws/${workspaceId}/ref/${referenceId}/keyframes/${i}.jpg`;
           await storage.uploadFile(key, file, "image/jpeg");
           frames.push({ source: `sample:${i}`, time: t, frameKey: key, file });

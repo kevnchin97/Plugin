@@ -20,7 +20,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           user={{ initial: (ctx.user.name || ctx.user.email || "?").slice(0, 1).toUpperCase(), email: ctx.user.email ?? "" }}
           theme={theme}
           agentsEnabled={agentsEnabled()}
-          signOut={doSignOut}
+          signOut={process.env.INNOVATE_SINGLE_USER === "1" ? null : doSignOut}
         >
           {children}
         </AppShell>

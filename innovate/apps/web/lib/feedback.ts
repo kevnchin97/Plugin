@@ -20,6 +20,7 @@ import {
   shareLinks,
   sql,
   users,
+  rows,
 } from "@innovate/db";
 import { canComment, canFavorite, parseMentions, type SharePermission } from "@innovate/shared";
 import { sendMail } from "@innovate/shared/mailer";
@@ -208,7 +209,7 @@ export async function addComment(actor: Actor, boardId: string, input: { referen
     .returning();
   const dto = serializeComment(row!);
   await publish(boardRoom(boardId), { type: "comment", comment: dto });
-  const [ref] = await db().execute<{ title: string }>(sql`select title from refs where id = ${input.referenceId}`);
+  const [ref] = rows<{ title: string }>(await db().execute(sql`select title from refs where id = ${input.referenceId}`));
   const where = ref?.title ?? "a reference";
   await logActivity(actor.workspaceId, boardId, "comment", actor.name, { referenceId: input.referenceId, title: where, timecode: dto.timecode, body: input.body.slice(0, 140) });
   await notifyTeam(
@@ -255,7 +256,7 @@ export async function toggleFavorite(actor: Actor, boardId: string, referenceId:
   const on = !existing;
   await publish(boardRoom(boardId), { type: "favorite", referenceId, count: n, by: actor.name, on });
   if (on) {
-    const [ref] = await db().execute<{ title: string }>(sql`select title from refs where id = ${referenceId}`);
+    const [ref] = rows<{ title: string }>(await db().execute(sql`select title from refs where id = ${referenceId}`));
     await logActivity(actor.workspaceId, boardId, "favorite", actor.name, { referenceId, title: ref?.title ?? "" });
   }
   return { on, count: n };

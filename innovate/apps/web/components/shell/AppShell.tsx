@@ -87,7 +87,8 @@ export function AppShell({
   user: { initial: string; email: string };
   theme: "light" | "dark";
   agentsEnabled: boolean;
-  signOut: () => Promise<void>;
+  /** Null in the single-user desktop app: there is no one else to sign in as. */
+  signOut: (() => Promise<void>) | null;
 }) {
   const path = usePathname();
   const [open, setOpen] = useState(false);
@@ -142,12 +143,18 @@ export function AppShell({
               </nav>
               <div className="flex items-center justify-between gap-2 border-t border-border p-3">
                 <div className="min-w-0">
-                  <div className="truncate text-sm">{user.email}</div>
-                  <form action={signOut}>
-                    <button type="submit" className="text-xs text-text-muted hover:text-text">
-                      Sign out
-                    </button>
-                  </form>
+                  {signOut ? (
+                    <>
+                      <div className="truncate text-sm">{user.email}</div>
+                      <form action={signOut}>
+                        <button type="submit" className="text-xs text-text-muted hover:text-text">
+                          Sign out
+                        </button>
+                      </form>
+                    </>
+                  ) : (
+                    <div className="truncate text-sm text-text-muted">Saved on this computer</div>
+                  )}
                 </div>
                 <ThemeToggle initial={theme} />
               </div>

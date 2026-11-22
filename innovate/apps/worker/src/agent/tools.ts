@@ -1,11 +1,11 @@
 import type Anthropic from "@anthropic-ai/sdk";
-import { Queue } from "bullmq";
+import { openQueue } from "@innovate/shared/queue";
 import { z } from "zod";
 import { agentTasks, and, asc, boardItems, boards, desc, eq, inArray, isNull, mediaJobs, rankReferences, references, scenes, sql } from "@innovate/db";
 import { type AgentAction, agentActionSchema, describeAction, MEDIA_QUEUE, type MediaJobData, REFERENCE_TYPES } from "@innovate/shared";
 import { adapterFor, vimeoSearch } from "@innovate/shared/adapters";
 import { embedTexts } from "../clip";
-import { db, redisConnection } from "../context";
+import { db } from "../context";
 
 /**
  * The agent's tools (SPEC §5.8): Innovate's own operations. Read tools answer from the
@@ -191,7 +191,7 @@ export const TOOLS = [
         .returning();
       const [job] = await db.insert(mediaJobs).values({ workspaceId: ctx.workspaceId, referenceId: ref!.id, type: "ingest", idempotencyKey: `ingest:${ref!.id}`, createdBy: ctx.userId }).returning();
       await db.update(agentTasks).set({ ingested: sql`${agentTasks.ingested} || ${JSON.stringify([ref!.id])}::jsonb` }).where(eq(agentTasks.id, ctx.taskId));
-      const q = new Queue<MediaJobData>(MEDIA_QUEUE, { connection: redisConnection() });
+      const q = openQueue<MediaJobData>(MEDIA_QUEUE);
       await q.add("ingest", { type: "ingest", jobId: job!.id, referenceId: ref!.id, workspaceId: ctx.workspaceId }, { jobId: job!.id, attempts: 2 });
       await q.close();
       const deadline = Date.now() + 5 * 60_000;

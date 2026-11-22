@@ -13,3 +13,5 @@ fixtures/*.webm
 apps/web/test-results/
 apps/web/playwright-report/
 apps/web/next-env.d.ts
+apps/desktop/.stage/
+apps/desktop/dist/

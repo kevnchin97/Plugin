@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { Job } from "bullmq";
+import type { QueueJob as Job } from "@innovate/shared/queue";
 import { and, asc, eq, inArray, mediaJobs, reelItems, reels, references } from "@innovate/db";
 import { runFfmpeg } from "@innovate/media";
 import { type ExportOutput, REEL_CARD_SECONDS, type ReelRenderJobData, slugify, trimmedDuration } from "@innovate/shared";

@@ -5,7 +5,7 @@ import { loadEnvConfig } from "@next/env";
 import { z } from "zod";
 
 // One .env for the whole monorepo (innovate/.env). Next only reads apps/web/.env by itself.
-const root = resolve(process.cwd(), "../..");
+const root = resolve(/*turbopackIgnore: true*/ process.cwd(), "../..");
 if (existsSync(resolve(root, "pnpm-workspace.yaml"))) {
   loadEnvConfig(root, process.env.NODE_ENV !== "production");
   process.env.INNOVATE_ROOT ??= root;
@@ -30,7 +30,7 @@ export function env() {
     const parsed = schema.safeParse(process.env);
     if (!parsed.success) throw new Error("Invalid web environment:\n" + z.prettifyError(parsed.error));
     const file = parsed.data.MAGIC_LINK_LOG_FILE;
-    cached = { ...parsed.data, MAGIC_LINK_LOG_FILE: file ? resolve(root, file) : undefined };
+    cached = { ...parsed.data, MAGIC_LINK_LOG_FILE: file ? resolve(/*turbopackIgnore: true*/ root, file) : undefined };
   }
   return cached;
 }

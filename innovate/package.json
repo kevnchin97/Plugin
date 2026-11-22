@@ -10,6 +10,7 @@
     "lint": "turbo run lint",
     "test": "turbo run test",
     "e2e": "pnpm --filter @innovate/web e2e",
+    "e2e:desktop": "E2E_DESKTOP=1 pnpm --filter @innovate/web e2e",
     "fixtures": "pnpm --filter @innovate/media fixtures",
     "tokens": "pnpm --filter @innovate/shared tokens",
     "db:generate": "pnpm --filter @innovate/db generate",

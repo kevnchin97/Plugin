@@ -3,9 +3,23 @@
 A visual research workspace for filmmakers and creative teams: find a reference, capture the exact
 moment, organize it, present it, get feedback. Spec: [`../prompts/innovate-claude-code/SPEC.md`](../prompts/innovate-claude-code/SPEC.md).
 
-**Status:** M0 (scaffold) and M1 (GIF Maker on uploads) are built. See `CLAUDE.md` for commands and conventions.
+**Status:** M0–M8 are built. See `CLAUDE.md` for commands and conventions.
 
-## Quick start
+## Desktop app (Windows)
+
+Download **Innovate-Setup-<version>.exe** from the latest green `innovate-ci` run on GitHub (Actions → the run →
+Artifacts → `Innovate-Setup-windows`), unzip it and run the installer. It installs for your user only, adds a
+Start-menu and desktop shortcut, and opens straight onto your boards: no Docker, no sign-in, nothing else to install.
+
+- Your boards, files and database live in `%APPDATA%\Innovate\data`; uninstalling keeps them.
+- The first search by look downloads the CLIP model (~150 MB) once.
+- The installer isn't code-signed, so Windows SmartScreen asks first: **More info → Run anyway**.
+- It's one person on one computer: no share links for other people, no text-to-save.
+
+Build it yourself on Windows: `pnpm install --config.node-linker=hoisted`, then `pnpm --filter @innovate/desktop package`
+(installer in `apps/desktop/dist/`).
+
+## Server quick start
 
 Requires Node 22.12+, pnpm 10, Docker, and ffmpeg/ffprobe on the PATH (the worker shells out to them).
 

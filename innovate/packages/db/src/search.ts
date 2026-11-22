@@ -5,7 +5,7 @@
  * match on title, notes, Claude description and platform. Keywords only when `vector` is null.
  */
 import { sql } from "drizzle-orm";
-import type { Db } from "./client";
+import { type Db, rows } from "./client";
 import { refSearchDocument } from "./schema";
 
 export interface RankFilters {
@@ -60,7 +60,7 @@ export async function rankReferences(db: Db, workspaceId: string, q: RankFilters
   const tsq = sql`websearch_to_tsquery('english', ${q.q})`;
   const vec = vector ? sql`${JSON.stringify(vector)}::vector` : null;
 
-  const rows = (await db.execute(sql`
+  const found = rows<{ id: string; sim: number | null; time: number | null; frame_key: string | null; keyword: boolean }>(await db.execute(sql`
     with ${vec ? sql`nearest as (
       select e.reference_id, e.time, e.frame_key, e.embedding <=> ${vec} as dist
       from embeddings e
@@ -81,9 +81,9 @@ export async function rankReferences(db: Db, workspaceId: string, q: RankFilters
     where ${where} and (${vec ? sql`best.reference_id is not null or ` : sql``}kw.id is not null)
     order by coalesce(${vec ? sql`best.sim` : sql`0`}, 0) + case when kw.id is not null then ${KEYWORD_BOOST}::float8 else 0 end desc, r.created_at desc
     limit 400
-  `)) as unknown as { id: string; sim: number | null; time: number | null; frame_key: string | null; keyword: boolean }[];
+  `));
 
-  const scored = rows.map((r) => ({ ...r, score: (r.sim ?? 0) + (r.keyword ? KEYWORD_BOOST : 0) }));
+  const scored = found.map((r) => ({ ...r, score: (r.sim ?? 0) + (r.keyword ? KEYWORD_BOOST : 0) }));
   const top = scored[0]?.sim ?? 0;
   const cutoff = Math.max(MIN_SIMILARITY, top - RELATIVE_WINDOW);
   const kept = scored.filter((r) => r.keyword || (r.sim ?? 0) >= cutoff).slice(0, q.limit);

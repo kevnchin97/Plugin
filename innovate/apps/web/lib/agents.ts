@@ -1,5 +1,4 @@
 import "server-only";
-import { Queue } from "bullmq";
 import {
   type AgentTask,
   agentTasks,
@@ -26,7 +25,7 @@ import {
   type AgentStep,
   describeAction,
 } from "@innovate/shared";
-import { redisOptions } from "@innovate/shared/embed-queue";
+import { openQueue, type QueueHandle } from "@innovate/shared/queue";
 import { publish } from "@innovate/shared/realtime";
 import { HttpError, notFound } from "./api";
 import { getBoard, placeOnBoard } from "./boards";
@@ -36,13 +35,10 @@ import { saveExport } from "./save-export";
 import { db } from "./server";
 
 declare global {
-  var __innovateAgentQueue: Queue<AgentJobData> | undefined;
+  var __innovateAgentQueue: QueueHandle<AgentJobData> | undefined;
 }
 const agentQueue = () =>
-  (globalThis.__innovateAgentQueue ??= new Queue<AgentJobData>(AGENT_QUEUE, {
-    connection: redisOptions(),
-    defaultJobOptions: { attempts: 1, removeOnComplete: { age: 24 * 3600 }, removeOnFail: { age: 7 * 24 * 3600 } },
-  }));
+  (globalThis.__innovateAgentQueue ??= openQueue<AgentJobData>(AGENT_QUEUE, { attempts: 1, removeOnComplete: { age: 24 * 3600 }, removeOnFail: { age: 7 * 24 * 3600 } }));
 
 /** Agents run on Claude; without a key the UI says so instead of queuing runs that would fail. */
 export const agentsEnabled = () => Boolean(process.env.ANTHROPIC_API_KEY);

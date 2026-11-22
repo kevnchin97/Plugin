@@ -2,24 +2,24 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { rankReferences, type Reference, references, sql } from "@innovate/db";
 import { CLIP_MODEL, type SearchQuery } from "@innovate/shared";
-import { EMBED_PRIORITY, embedQueue, embedQueueEvents } from "@innovate/shared/embed-queue";
-import { redisClient as redis } from "@innovate/shared/realtime";
+import { EMBED_PRIORITY, embedQueue } from "@innovate/shared/embed-queue";
+import { cacheGet, cacheSet } from "@innovate/shared/realtime";
 import { serializeRefLite } from "./boards";
 import { db, storage } from "./server";
 
 /** How long a search waits for the worker's text encoder before falling back to keywords only. */
 const EMBED_TIMEOUT_MS = 15_000;
-/** The query's CLIP text embedding (computed on the worker, cached in Redis). Null if the worker is unavailable. */
+/** The query's CLIP text embedding (computed on the worker, cached in Redis or memory). Null if the worker is unavailable. */
 export async function embedQuery(text: string): Promise<number[] | null> {
   const norm = text.trim().toLowerCase().replace(/\s+/g, " ");
   const hash = createHash("sha1").update(`${CLIP_MODEL}\n${norm}`).digest("hex");
   const cacheKey = `clipq:${hash}`;
   try {
-    const hit = await redis().get(cacheKey);
+    const hit = await cacheGet(cacheKey);
     if (hit) return JSON.parse(hit) as number[];
     const job = await embedQueue().add("embed-text", { type: "embed-text", text: norm }, { jobId: `text-${hash}`, attempts: 1, priority: EMBED_PRIORITY.query });
-    const vector = (await job.waitUntilFinished(embedQueueEvents(), EMBED_TIMEOUT_MS)) as number[];
-    await redis().set(cacheKey, JSON.stringify(vector), "EX", 7 * 24 * 3600);
+    const vector = (await job.result(EMBED_TIMEOUT_MS)) as number[];
+    await cacheSet(cacheKey, JSON.stringify(vector), 7 * 24 * 3600);
     return vector;
   } catch (err) {
     console.warn("[search] query embedding unavailable:", (err as Error).message);

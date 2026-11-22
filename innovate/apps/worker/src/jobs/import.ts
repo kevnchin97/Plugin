@@ -1,6 +1,6 @@
 import { mkdir, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
-import type { Job } from "bullmq";
+import type { QueueJob as Job } from "@innovate/shared/queue";
 import { and, eq, mediaJobs, references } from "@innovate/db";
 import { runFfprobe } from "@innovate/media";
 import type { ImportJobData } from "@innovate/shared";

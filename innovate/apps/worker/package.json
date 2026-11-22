@@ -3,6 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "exports": {
+    "./workers": "./src/workers.ts"
+  },
   "scripts": {
     "dev": "NODE_USE_ENV_PROXY=1 tsx watch --clear-screen=false src/main.ts",
     "start": "NODE_USE_ENV_PROXY=1 tsx src/main.ts",

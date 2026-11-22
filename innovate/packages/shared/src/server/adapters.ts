@@ -134,11 +134,18 @@ interface VimeoApiVideo {
   pictures?: { sizes?: { width: number; link: string }[] };
 }
 
+/**
+ * A fake Vimeo API (tests) serves downloads from its own host: allowed only off the real API, and only in
+ * development or the e2e suite (which runs production builds, e.g. against the desktop app).
+ */
+const testDownloads = (env: NodeJS.ProcessEnv, base: string) =>
+  base !== "https://api.vimeo.com" && (env.NODE_ENV !== "production" || env.INNOVATE_E2E === "1");
+
 /** Vimeo search for the Research Agent: needs only VIMEO_ACCESS_TOKEN (importing still needs INGEST_VIMEO_ENABLED). */
 export function vimeoSearch(env: NodeJS.ProcessEnv = process.env): VimeoAdapter | null {
   if (!env.VIMEO_ACCESS_TOKEN) return null;
   const base = env.VIMEO_API_BASE || "https://api.vimeo.com";
-  return new VimeoAdapter(env.VIMEO_ACCESS_TOKEN, base, base !== "https://api.vimeo.com" && env.NODE_ENV !== "production");
+  return new VimeoAdapter(env.VIMEO_ACCESS_TOKEN, base, testDownloads(env, base));
 }
 
 /** Adapters enabled by configuration, in priority order. */
@@ -146,7 +153,7 @@ export function configuredAdapters(env: NodeJS.ProcessEnv = process.env): Ingest
   const list: IngestAdapter[] = [];
   if (env.INGEST_VIMEO_ENABLED === "true" && env.VIMEO_ACCESS_TOKEN) {
     const base = env.VIMEO_API_BASE || "https://api.vimeo.com";
-    list.push(new VimeoAdapter(env.VIMEO_ACCESS_TOKEN, base, base !== "https://api.vimeo.com" && env.NODE_ENV !== "production"));
+    list.push(new VimeoAdapter(env.VIMEO_ACCESS_TOKEN, base, testDownloads(env, base)));
   }
   return list;
 }

@@ -2,8 +2,10 @@
  * Server-only S3 helpers (MinIO locally, S3/R2 in production). Import from
  * "@innovate/shared/storage"; never from client components.
  */
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { createReadStream, createWriteStream } from "node:fs";
-import { rename, stat } from "node:fs/promises";
+import { copyFile, mkdir, rename, stat } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import { pipeline } from "node:stream/promises";
 import type { Readable } from "node:stream";
 import {
@@ -137,4 +139,115 @@ export class Storage {
       expiresIn,
     });
   }
+}
+
+/**
+ * Desktop app storage: objects are plain files under `dir` (keys are paths). Browsers reach them
+ * through the web app's `/api/files/<key>` route with an HMAC-signed, expiring URL, the same
+ * contract as S3 presigned URLs, so callers don't know the difference.
+ */
+export class LocalStorage {
+  constructor(readonly config: { dir: string; secret: string; publicUrl: string; signedUrlTtl: number }) {}
+
+  /**
+   * Absolute path for a key; refuses keys that would escape the storage folder. Characters Windows
+   * doesn't allow in file names (keys can hold e.g. "agent-export:…:gif") are %-encoded, as is "%".
+   */
+  pathFor(key: string): string {
+    const parts = key.split("/");
+    if (!key || parts.some((p) => !p || p === "." || p === "..")) throw new Error(`Bad storage key: ${key}`);
+    return join(this.config.dir, ...parts.map(safeName));
+  }
+
+  async ensureBucket(): Promise<void> {
+    await mkdir(this.config.dir, { recursive: true });
+  }
+
+  async uploadFile(key: string, file: string, _contentType: string): Promise<number> {
+    const dest = this.pathFor(key);
+    await mkdir(dirname(dest), { recursive: true });
+    const tmp = `${dest}.${process.pid}.${Date.now()}.part`;
+    await copyFile(file, tmp);
+    await rename(tmp, dest);
+    return (await stat(dest)).size;
+  }
+
+  async putStream(key: string, body: Readable, _contentType: string): Promise<void> {
+    const dest = this.pathFor(key);
+    await mkdir(dirname(dest), { recursive: true });
+    const tmp = `${dest}.${process.pid}.${Date.now()}.part`;
+    await pipeline(body, createWriteStream(tmp));
+    await rename(tmp, dest);
+  }
+
+  async downloadFile(key: string, file: string): Promise<void> {
+    const tmp = `${file}.${process.pid}.${Date.now()}.part`;
+    await copyFile(this.pathFor(key), tmp);
+    await rename(tmp, file);
+  }
+
+  async head(key: string): Promise<{ size: number; contentType?: string } | null> {
+    try {
+      const s = await stat(this.pathFor(key));
+      return s.isFile() ? { size: s.size, contentType: contentTypeFor(key) } : null;
+    } catch {
+      return null;
+    }
+  }
+
+  async signedGetUrl(key: string, opts: { downloadName?: string; expiresIn?: number } = {}): Promise<string> {
+    return this.sign("GET", key, opts.expiresIn ?? this.config.signedUrlTtl, opts.downloadName);
+  }
+
+  async signedPutUrl(key: string, _contentType: string, expiresIn = 3600): Promise<string> {
+    return this.sign("PUT", key, expiresIn);
+  }
+
+  private sign(method: "GET" | "PUT", key: string, expiresIn: number, downloadName?: string): string {
+    const exp = Math.floor(Date.now() / 1000) + expiresIn;
+    const qs = new URLSearchParams({ exp: String(exp) });
+    if (downloadName) qs.set("dl", downloadName);
+    qs.set("sig", localSignature(this.config.secret, method, key, exp, downloadName));
+    return `${this.config.publicUrl.replace(/\/$/, "")}/api/files/${key.split("/").map(encodeURIComponent).join("/")}?${qs}`;
+  }
+
+  /** Checks a signed URL's parameters (used by the /api/files route). */
+  verify(method: "GET" | "PUT", key: string, params: URLSearchParams): boolean {
+    const exp = Number(params.get("exp"));
+    const sig = params.get("sig") ?? "";
+    if (!Number.isFinite(exp) || exp < Date.now() / 1000) return false;
+    const want = Buffer.from(localSignature(this.config.secret, method, key, exp, params.get("dl") ?? undefined));
+    const got = Buffer.from(sig);
+    return got.length === want.length && timingSafeEqual(got, want);
+  }
+}
+
+/** One key segment as a file name every OS accepts: %-encode "%", Windows' reserved characters and control characters. */
+function safeName(segment: string): string {
+  let out = "";
+  for (const c of segment) out += c === "%" || '<>:"\\|?*'.includes(c) || c.charCodeAt(0) < 32 ? `%${c.charCodeAt(0).toString(16).padStart(2, "0")}` : c;
+  return out;
+}
+
+function localSignature(secret: string, method: string, key: string, exp: number, downloadName?: string) {
+  return createHmac("sha256", secret).update(`${method}\n${key}\n${exp}\n${downloadName ?? ""}`).digest("base64url");
+}
+
+const TYPES: Record<string, string> = {
+  mp4: "video/mp4", mov: "video/quicktime", webm: "video/webm", m4v: "video/mp4", mkv: "video/x-matroska",
+  gif: "image/gif", jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp", avif: "image/avif",
+  pdf: "application/pdf", json: "application/json", vtt: "text/vtt", m4a: "audio/mp4", mp3: "audio/mpeg", wav: "audio/wav",
+};
+export const contentTypeFor = (key: string) => TYPES[key.split(".").pop()?.toLowerCase() ?? ""] ?? "application/octet-stream";
+
+export type AnyStorage = Storage | LocalStorage;
+
+/** S3 (MinIO, S3, R2) unless STORAGE_DIR is set, which the desktop app does. */
+export function storageFromEnv(env = process.env): AnyStorage {
+  if (env.STORAGE_DIR) {
+    const secret = env.AUTH_SECRET;
+    if (!secret) throw new Error("AUTH_SECRET is not set.");
+    return new LocalStorage({ dir: env.STORAGE_DIR, secret, publicUrl: env.AUTH_URL ?? "http://localhost:3000", signedUrlTtl: Number(env.SIGNED_URL_TTL_SECONDS || 3600) });
+  }
+  return new Storage(storageConfigFromEnv(env));
 }

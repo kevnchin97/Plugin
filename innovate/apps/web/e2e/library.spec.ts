@@ -1,5 +1,6 @@
 import postgres from "postgres";
 import { expect, test } from "@playwright/test";
+import { DESKTOP } from "../playwright.config";
 import { createBoard, fixture, signIn } from "./helpers";
 
 const DATABASE_URL = process.env.DATABASE_URL ?? "postgres://innovate:innovate@localhost:5432/innovate";
@@ -25,6 +26,8 @@ test("library: native-ratio masonry, multi-select, add to board", async ({ page 
 });
 
 test("library: 5,000 items are interactive in under a second (SPEC §6)", async ({ page }) => {
+  // Seeds thousands of rows straight into Postgres; the desktop app's database lives inside its process.
+  test.skip(DESKTOP, "needs direct database access");
   const email = await signIn(page);
   const sql = postgres(DATABASE_URL, { max: 1 });
   try {
